@@ -1,3 +1,17 @@
+// build.gradle.kts (Project level) - android/build.gradle.kts
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.google.gms:google-services:4.4.1") // <--- Corrigido aqui
+        classpath("com.android.tools.build:gradle:8.1.0") // <--- Corrigido aqui (exemplo)
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.0") // <--- Corrigido aqui (exemplo)
+   }
+}
+
 allprojects {
     repositories {
         google()

@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "1098561015569",
+    "project_id": "letterai-collection",
+    "storage_bucket": "letterai-collection.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1098561015569:android:57e01ca84d63e59efb46b0",
+        "android_client_info": {
+          "package_name": "com.example.letterai_colletion"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1098561015569-18ndf8d5jlqg1o558nucem48ugehtuv2.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.letterai_colletion",
+            "certificate_hash": "c504b46dabe1701ef337e7c1fbf02b9cbf12a7a5"
+          }
+        },
+        {
+          "client_id": "1098561015569-3leash4s6v202tlr5v0pm5tiuo85hcp5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAMK5bit6BuaoctpzvVYPjk9e4T7a-gLBY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1098561015569-3leash4s6v202tlr5v0pm5tiuo85hcp5.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "1098561015569-oooonfo30mb704nlvu4k7hv5jnlo6aef.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.letteraiColletion"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
