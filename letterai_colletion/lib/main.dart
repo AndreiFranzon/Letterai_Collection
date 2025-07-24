@@ -23,33 +23,22 @@ class MyApp extends StatelessWidget {
       return MaterialApp(
         title: 'Login com Google',
         debugShowCheckedModeBanner: false,
-        home: const AuthWrapper(),
-      );
-    }
-}
-
-class AuthWrapper extends StatelessWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return StreamBuilder<User?>(
-      stream: FirebaseAuth.instance.authStateChanges(), 
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.active) {
-          final user = snapshot.data;
-          if (user != null) {
-            return const HomePage(); //Já logado
-          } else {
-            return const LoginPage(); //Não fez login
-          }
-        }
-        return const Scaffold(
+        home: StreamBuilder(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.active) {
+              final user = snapshot.data;
+              if (user == null) {
+                return const LoginPage();
+              } else {
+                return const HomePage();
+              }
+            }
+          return const Scaffold(
           body: Center(child: CircularProgressIndicator()),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
-
-

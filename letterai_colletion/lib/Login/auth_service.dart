@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 //import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+//import 'package:letterai_colletion/Login/login_page.dart';
 
 class AuthService {
 
@@ -30,7 +32,18 @@ class AuthService {
   }
 
 Future<void> signOut() async {
-  await FirebaseAuth.instance.signOut();
-  await _googleSignIn.signOut();
+  try {
+    await FirebaseAuth.instance.signOut();
+    await _googleSignIn.signOut();
+    print('Logout realizado com sucesso.');
+  } catch (e) {
+    print('Erro no logout: $e');
+  }
 }
+
+Future<void> logout(BuildContext context) async {
+  await signOut();
+ 
+}
+
 }
