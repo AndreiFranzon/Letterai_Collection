@@ -18,7 +18,7 @@ class MenuPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const HealthPage(),
+                    builder: (context) => HealthPage(),
                     fullscreenDialog: true, // ajuda a dar ideia de “modal”, opcional
                   ),
                 );

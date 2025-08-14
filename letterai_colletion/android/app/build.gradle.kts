@@ -26,8 +26,8 @@ android {
 
     defaultConfig {
         applicationId = "com.example.letterai_colletion"
-        minSdk = 23
-        targetSdk = flutter.targetSdkVersion
+        minSdk = 26
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
     }
