@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:health/health.dart';
 //import 'package:permission_handler/permission_handler.dart';
 //import 'package:carp_serializable/carp_serializable.dart';
-import 'package:letterai_colletion/Health/util.dart';
+import 'package:letterai_colletion/Health/support/util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 

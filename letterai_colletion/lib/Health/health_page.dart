@@ -3,7 +3,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
-import 'package:letterai_colletion/Health/util.dart';
+import 'package:letterai_colletion/Health/support/util.dart';
 import 'package:workmanager/workmanager.dart';
 
 import 'package:letterai_colletion/Health/diary_sync/dados_fixos.dart';

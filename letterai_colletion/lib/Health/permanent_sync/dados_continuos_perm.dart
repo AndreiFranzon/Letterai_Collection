@@ -3,7 +3,8 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
-import 'package:letterai_colletion/Health/util.dart';
+import 'package:letterai_colletion/Health/support/util.dart';
+import 'package:letterai_colletion/Health/support/acitivities.dart' as support;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -109,7 +110,8 @@ Future<void> sincronizarDadosContinuosPermanentes() async {
     }
 
     //-x+x- Dados de exercício físico
-    
+    final mapaAtividades = support.gerarMapaAtividades();
+
     final dadosWorkout = dadosContinuosWorkout.where((dado) => dado.type == HealthDataType.WORKOUT).toList();
 
     if (dadosWorkout.isNotEmpty) {
@@ -118,10 +120,25 @@ Future<void> sincronizarDadosContinuosPermanentes() async {
       for (int i = 0; i < dadosWorkout.length; i++) {
         final item = dadosWorkout[i];
         final workoutValue = item.value as WorkoutHealthValue;
+
+        final atividadeNome = workoutValue.workoutActivityType
+            ?.toString()
+            .split('.')
+            .last ??
+        'OTHER';
+
+        final atividadeId = mapaAtividades.entries
+        .firstWhere(
+          (e) => e.key.toString().split('.').last == atividadeNome,
+          orElse: () =>
+              MapEntry(support.HealthWorkoutActivityType.OTHER, 0),
+        )
+        .value;
+
         mapaWorkouts[i.toString()] = {
           'hora_inicio': item.dateFrom.toIso8601String(),
           'hora_fim': item.dateTo.toIso8601String(),
-          'atividade': workoutValue.workoutActivityType?.toString().split('.').last ?? 'Desconhecida',
+          'atividade': atividadeId,
         };
       }
       
@@ -136,3 +153,4 @@ Future<void> sincronizarDadosContinuosPermanentes() async {
       debugPrint('Nenhum dado de exercício físico encontrado');
     }
 }
+
