@@ -53,6 +53,7 @@ Future<void> sincronizarDadosFixos () async {
       );
 
       Map<String, List<HealthDataPoint>> dadosAgrupados = {};
+      Map<String, double> totaisDia = {};
 
       for (var data in dadosPorHora) {
         final hora = data.dateFrom.hour.toString().padLeft(2, '0');
@@ -65,23 +66,44 @@ Future<void> sincronizarDadosFixos () async {
         final dados = entrada.value;
 
         List<Map<String, dynamic>> dadosConvertidos = dados.map((dado) {
+          final valor = (dado.value is NumericHealthValue)
+            ? (dado.value as NumericHealthValue).numericValue
+            : double.tryParse(dado.value.toString()) ?? 0.0;
+
           return {
             'tipo': dado.typeString,
-            'valor': (dado.value is NumericHealthValue)
-             ? (dado.value as NumericHealthValue).numericValue 
-             : dado.value.toString(),
+            'valor': valor,
             'fim': dado.dateTo.toIso8601String(),
             'inicio': dado.dateFrom.toIso8601String(),
           };
         }).toList();
 
+        Map<String, double> totaisHora = {};
+        for (var dado in dados) {
+          final tipo = dado.typeString;
+          final valor = (dado.value is NumericHealthValue)
+            ? (dado.value as NumericHealthValue).numericValue
+            : double.tryParse(dado.value.toString()) ?? 0.0;
+
+          totaisHora[tipo] = (totaisHora[tipo] ?? 0) + valor;
+          totaisDia[tipo] = (totaisDia[tipo] ?? 0) + valor;
+        }
+
         await dadosDiariosRef.doc(hora).set({
           'dados': dadosConvertidos,
+          'totais': totaisHora,
           'sincronizado_em': Timestamp.now(),
         });
 
         debugPrint('Dados salvos na hora $hora');
       }
+
+      
+      await dadosDiariosRef.doc("total_diario").set({
+        'atividade': totaisDia,
+        'sincronizado_em': Timestamp.now(),
+      });
+
     } catch (e) {
       debugPrint('Erro ao sincronizar dados: $e');
     }

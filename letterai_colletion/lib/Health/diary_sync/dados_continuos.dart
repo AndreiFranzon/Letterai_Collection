@@ -22,6 +22,10 @@ Future<void> sincronizarDadosContinuos () async {
       }
     
   final userId = user.uid;
+  final dadosDiariosRef = FirebaseFirestore.instance
+    .collection('usuarios')
+    .doc(userId)
+    .collection('dados_diarios');
 
     List<HealthDataType> tiposContinuos = (Platform.isAndroid ? dataTypesAndroid : dataTypesIOS)
       .where((type) =>
@@ -40,36 +44,28 @@ Future<void> sincronizarDadosContinuos () async {
     );
   
     final sleepSession = dadosContinuos.where((dado) => dado.type == HealthDataType.SLEEP_SESSION).toList();
+    
+    double duracaoSonoHoras = 0;
+
+    if (sleepSession.isNotEmpty) {
+      final inicio = sleepSession.first.dateFrom;
+      final fim = sleepSession.first.dateTo;
+      duracaoSonoHoras = fim.difference(inicio).inMinutes / 60.0;
+
+      await dadosDiariosRef.doc('sleep_session').set({
+        'hora_inicio': inicio.toIso8601String(),
+        'hora_fim': fim.toIso8601String(),
+      });
+    } else {
+      await dadosDiariosRef.doc('sleep_session').set({'status': 'no_data'});
+      debugPrint('Dados de sono vazios');
+    }
+    
     final outrosTipos = dadosContinuos.where((dado) =>
       dado.type == HealthDataType.SLEEP_LIGHT ||
       dado.type == HealthDataType.SLEEP_DEEP ||
       dado.type == HealthDataType.SLEEP_REM
     ).toList();
-
-    if (sleepSession.isNotEmpty) {
-      final inicio = sleepSession.first.dateFrom;
-      final fim = sleepSession.first.dateTo;
-
-      await FirebaseFirestore.instance
-        .collection('usuarios')
-        .doc(userId)
-        .collection('dados_diarios')
-        .doc('sleep_session')
-        .set({
-          'hora_inicio': inicio.toIso8601String(),
-          'hora_fim': fim.toIso8601String(),
-        });
-    } else {
-      await FirebaseFirestore.instance
-      .collection('usuarios')
-        .doc(userId)
-        .collection('dados_diarios')
-        .doc('sleep_session')
-        .set({
-          'status': 'no_data',
-        });
-      debugPrint('Dados de sono vazios');
-    }
 
     final Map<String, Map<String, dynamic>> mapaTiposSono = {};
 
@@ -83,30 +79,18 @@ Future<void> sincronizarDadosContinuos () async {
     }
 
     if (mapaTiposSono.isNotEmpty){
-      await FirebaseFirestore.instance
-        .collection('usuarios')
-        .doc(userId)
-        .collection('dados_diarios')
-        .doc('sleep_types')
-        .set(mapaTiposSono);
+      await dadosDiariosRef.doc('sleep_types').set(mapaTiposSono);
     } else {
-      await FirebaseFirestore.instance
-        .collection('usuarios')
-        .doc(userId)
-        .collection('dados_diarios')
-        .doc('sleep_types')
-        .set({
-            'status': 'no_data',
-          });
-
+      await dadosDiariosRef.doc('sleep_types').set({'status': 'no_data',});
       debugPrint ('Tipos de sono não encontrados');
     }
 
     //-x+x- Dados de exercício físico
     
     final mapaAtividades = support.gerarMapaAtividades();
-
     final dadosWorkout = dadosContinuos.where((dado) => dado.type == HealthDataType.WORKOUT).toList();
+
+    double duracaoExerciciosMinuto = 0;
 
     if (dadosWorkout.isNotEmpty) {
       final Map<String, Map<String, dynamic>> mapaWorkouts = {};
@@ -134,24 +118,20 @@ Future<void> sincronizarDadosContinuos () async {
           'hora_fim': item.dateTo.toIso8601String(),
           'atividade': atividadeId,
         };
+
+        duracaoExerciciosMinuto += item.dateTo.difference(item.dateFrom).inMinutes / 60.0;
       }
       
-      await FirebaseFirestore.instance
-        .collection('usuarios')
-        .doc(userId)
-        .collection('dados_diarios')
-        .doc('workouts')
-        .set(mapaWorkouts);
+      await dadosDiariosRef.doc('workouts').set(mapaWorkouts);
     } else {
-      await FirebaseFirestore.instance
-        .collection('usuarios')
-        .doc(userId)
-        .collection('dados_diarios')
-        .doc('workouts')
-        .set({
-          'status': 'no_data',
-        });
-
+      await dadosDiariosRef.doc('workouts').set({'status': 'no_data',});
       debugPrint('Nenhum dado de exercício físico encontrado');
     }
+
+    await dadosDiariosRef.doc("total_diario").set({
+      'sono': {'duracao_horas': duracaoSonoHoras},
+      'exercicios': {'duracao_minutos': duracaoExerciciosMinuto},
+    }, SetOptions(merge: true));
+
+    debugPrint('Total diário de sono e exercícios salvos');
   }

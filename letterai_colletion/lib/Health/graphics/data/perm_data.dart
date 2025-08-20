@@ -16,6 +16,12 @@ Future<void> carregarDadosPerm() async {
   //final userId = user.uid;
 }
 
+int totalPassosPerm = 0;
+int totalCaloriasPerm = 0;
+int totalDistanciaPerm = 0;
+double totalSonoPerm= 0;
+double totalExercicioPerm = 0;
+
 Future<String?> buscarUltimaData() async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
@@ -53,6 +59,12 @@ Future<List<int>> buscarPassosPermanentes(
       dia != null
           ? DateFormat('yyyy-MM-dd').format(dia)
           : (await buscarUltimaData()) ?? '';
+
+  final metrica = 'STEPS';
+  int totalPermPassos = await buscarTotalMetricas(userId, metrica, dataDoc);
+
+  totalPassosPerm = totalPermPassos;
+
 
   for (int i = 0; i < 24; i++) {
     final hora = i.toString().padLeft(2, '0');
@@ -95,6 +107,11 @@ Future<List<int>> buscarCaloriasPermanentes(
           ? DateFormat('yyyy-MM-dd').format(dia)
           : (await buscarUltimaData()) ?? '';
 
+  final metrica = 'TOTAL_CALORIES_BURNED';
+  int totalPermCalorias = await buscarTotalMetricas(userId, metrica, dataDoc);
+
+  totalCaloriasPerm = totalPermCalorias;
+
   for (int i = 0; i < 24; i++) {
     final hora = i.toString().padLeft(2, '0');
 
@@ -135,6 +152,11 @@ Future<List<int>> buscarDistanciaPermanente(
       dia != null
           ? DateFormat('yyyy-MM-dd').format(dia)
           : (await buscarUltimaData()) ?? '';
+
+  final metrica = 'DISTANCE_DELTA';
+  int totalPermDistancia = await buscarTotalMetricas(userId, metrica, dataDoc);
+
+  totalDistanciaPerm = totalPermDistancia;
 
   for (int i = 0; i < 24; i++) {
     final hora = i.toString().padLeft(2, '0');
@@ -177,6 +199,10 @@ Future<List<String>> buscarSonoPermanente(
           ? DateFormat('yyyy-MM-dd').format(dia)
           : (await buscarUltimaData()) ?? '';
 
+  double totalPermSono = await buscarTotalSono(userId, dataDoc);
+
+  totalSonoPerm = totalPermSono;
+
   final doc =
       await FirebaseFirestore.instance
           .collection('usuarios')
@@ -210,6 +236,10 @@ Future<List<int>> buscarExercicioPermanente(
           ? DateFormat('yyyy-MM-dd').format(dia)
           : (await buscarUltimaData()) ?? '';
 
+  double totalPermExercicio = await buscarTotalExercicio(userId, dataDoc);
+
+  totalExercicioPerm = totalPermExercicio;
+
   final doc =
       await FirebaseFirestore.instance
           .collection('usuarios')
@@ -239,4 +269,103 @@ Future<List<int>> buscarExercicioPermanente(
     });
   }
   return listaWorkouts;
+}
+
+//==========X+Retorno de soma dos valores+X==========\\
+
+Future<int> buscarTotalMetricas(String userId, String metrica, String? dataDoc) async {
+  try {
+    final docRef = FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(userId)
+        .collection('dados_permanentes')
+        .doc(dataDoc)
+        .collection('total_diario')
+        .doc('totais');
+
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) return 0;
+
+    final data = snapshot.data();
+    if (data == null || !data.containsKey('totais_atividade')) return 0;
+
+    final atividadeMap = data['totais_atividade'] as Map<String, dynamic>;
+    final valor = atividadeMap[metrica];
+
+    if (valor is int) return valor;
+    if (valor is double) return valor.toInt();
+
+    debugPrint('Dados buscados com sucesso');
+
+    return 0;
+  } catch (e) {
+    debugPrint('Erro ao buscar total de passos diários: $e');
+    return 0;
+  }
+}
+
+Future<double> buscarTotalExercicio(String userId, String? dataDoc) async {
+  try {
+    final docRef = FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(userId)
+        .collection('dados_permanentes')
+        .doc(dataDoc)
+        .collection('total_diario')
+        .doc('totais');
+
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) return 0.0;
+
+    final data = snapshot.data();
+    if (data == null || !data.containsKey('totais')) return 0.0;
+
+    final totaisMap = data['totais'] as Map<String, dynamic>;
+    if (!totaisMap.containsKey('exercícios')) return 0.0;
+ 
+    final exerciciosMap = totaisMap['exercícios'] as Map<String, dynamic>;
+    final valor = exerciciosMap['duracao_horas'];
+
+    if (valor is double) return valor;
+    if (valor is int) return valor.toDouble();
+    if (valor is String) return double.tryParse(valor) ?? 0.0;
+
+    return 0.0;
+  } catch (e) {
+    debugPrint('Erro ao buscar total de exercícios diários: $e');
+    return 0.0;
+  }
+}
+
+Future<double> buscarTotalSono(String userId, String? dataDoc) async {
+  try {
+    final docRef = FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(userId)
+        .collection('dados_permanentes')
+        .doc(dataDoc)
+        .collection('total_diario')
+        .doc('totais');
+
+    final snapshot = await docRef.get();
+    if (!snapshot.exists) return 0.0;
+
+    final data = snapshot.data();
+    if (data == null || !data.containsKey('totais')) return 0.0;
+
+    final totaisMap = data['totais'] as Map<String, dynamic>;
+    if (!totaisMap.containsKey('sono')) return 0.0;
+ 
+    final exerciciosMap = totaisMap['sono'] as Map<String, dynamic>;
+    final valor = exerciciosMap['duracao_horas'];
+
+    if (valor is double) return valor;
+    if (valor is int) return valor.toDouble();
+    if (valor is String) return double.tryParse(valor) ?? 0.0;
+
+    return 0.0;
+  } catch (e) {
+    debugPrint('Erro ao buscar total de sono diario: $e');
+    return 0.0;
+  }
 }

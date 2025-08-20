@@ -9,148 +9,169 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
-
 final health = Health();
 
 Future<void> sincronizarDadosContinuosPermanentes() async {
-    final endDate = DateTime.now();
-    final startDate = endDate.subtract(const Duration(hours: 30));
-    final startDataWorkout = endDate.subtract(const Duration(hours: 24));
-    final padraoHoraFormatada = endDate.subtract(const Duration(hours: 24));
+  final now = DateTime.now();
+  final diaAlvo = now.subtract(const Duration(days: 1));
+  final startSono = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day -1, 18, 0, 0);
+  final endSono = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day, 23, 59, 59);
+  final startWorkout = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day,  0, 0, 0);
+  final endWorkout = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day, 23, 59, 59);
+  final padraoHoraFormatada = now.subtract(const Duration(hours: 24));
 
-    final user = FirebaseAuth.instance.currentUser;
-      if (user == null) {
-        debugPrint('O usuário não está logado');
-        return;
-      }
-    
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    debugPrint('O usuário não está logado');
+    return;
+  }
+
   final userId = user.uid;
-
   final dataFormatada = DateFormat('yyyy-MM-dd').format(padraoHoraFormatada);
-
-
-    List<HealthDataType> tiposContinuos = (Platform.isAndroid ? dataTypesAndroid : dataTypesIOS)
-      .where((type) =>
-        type == HealthDataType.WORKOUT ||
-        type == HealthDataType.SLEEP_LIGHT ||
-        type == HealthDataType.SLEEP_DEEP ||
-        type == HealthDataType.SLEEP_REM ||
-        type == HealthDataType.SLEEP_ASLEEP ||
-        type == HealthDataType.SLEEP_SESSION)
-    .toList();
-
-    final dadosContinuosSono = await health.getHealthDataFromTypes(
-      startTime: startDate,
-      endTime: endDate,
-      types: tiposContinuos.where((type) => 
-        type == HealthDataType.SLEEP_LIGHT ||
-        type == HealthDataType.SLEEP_DEEP ||
-        type == HealthDataType.SLEEP_REM ||
-        type == HealthDataType.SLEEP_ASLEEP ||
-        type == HealthDataType.SLEEP_SESSION).toList(),
-    );
-    
-    final dadosContinuosWorkout = await health.getHealthDataFromTypes(
-      startTime: startDataWorkout, 
-      endTime: endDate,
-      types: tiposContinuos.where((type) => type == HealthDataType.WORKOUT). toList(),
-    );
-    
-    final sleepSession = dadosContinuosSono.where((dado) => dado.type == HealthDataType.SLEEP_SESSION).toList();
-    final outrosTipos = dadosContinuosSono.where((dado) =>
-      dado.type == HealthDataType.SLEEP_LIGHT ||
-      dado.type == HealthDataType.SLEEP_DEEP ||
-      dado.type == HealthDataType.SLEEP_REM ||
-      dado.type == HealthDataType.SLEEP_ASLEEP
-    ).toList();
-
-    final dadosPermanentesRef = FirebaseFirestore.instance
+  final dadosPermanentesRef = FirebaseFirestore.instance
       .collection('usuarios')
       .doc(userId)
       .collection('dados_permanentes')
       .doc(dataFormatada);
 
-    if (sleepSession.isNotEmpty) {
-      final inicio = sleepSession.first.dateFrom;
-      final fim = sleepSession.first.dateTo;
+  List<HealthDataType> tiposSono = [
+    HealthDataType.SLEEP_LIGHT,
+    HealthDataType.SLEEP_DEEP,
+    HealthDataType.SLEEP_REM,
+    HealthDataType.SLEEP_ASLEEP,
+    HealthDataType.SLEEP_SESSION,
+  ];
 
-      await dadosPermanentesRef.set({
-        'sleep_session': {
-          'hora_inicio': inicio.toIso8601String(),
-          'hora_fim': fim.toIso8601String(),
-        }
-      }, SetOptions(merge: true));
-    } else {
-      await dadosPermanentesRef.set({
-        'sleep_session': {'status': 'no_data'}
-      }, SetOptions(merge: true));
-      debugPrint('Dados de sono vazios');
-    }
+  final dadosContinuosSono = await health.getHealthDataFromTypes(
+    startTime: startSono,
+    endTime: endSono,
+    types: tiposSono,
+  );
 
-    final Map<String, Map<String, dynamic>> mapaTiposSono = {};
+  final sleepSession =
+      dadosContinuosSono
+          .where((dado) => dado.type == HealthDataType.SLEEP_SESSION)
+          .toList();
+  final outrosTipos =
+      dadosContinuosSono
+          .where(
+            (dado) =>
+                dado.type == HealthDataType.SLEEP_LIGHT ||
+                dado.type == HealthDataType.SLEEP_DEEP ||
+                dado.type == HealthDataType.SLEEP_REM ||
+                dado.type == HealthDataType.SLEEP_ASLEEP,
+          )
+          .toList();
 
-    for (int i = 0; i < outrosTipos.length; i++){
-      final item = outrosTipos[i];
-      mapaTiposSono[i.toString()] = {
-        'hora_inicio': item.dateFrom.toIso8601String(),
-        'hora_fim': item.dateTo.toIso8601String(),
-        'tipo': item.type.toString().split('.').last,
-      };
-    }
+  if (sleepSession.isNotEmpty) {
+    final inicio = sleepSession.first.dateFrom;
+    final fim = sleepSession.first.dateTo;
 
-    if (mapaTiposSono.isNotEmpty){
-      await dadosPermanentesRef.set({
-        'sleep_types': mapaTiposSono,
-      }, SetOptions(merge:true));
-    } else {
-      await dadosPermanentesRef.set({
-        'sleep_types': {'status': 'no_data'},
-      }, SetOptions(merge: true));
-      debugPrint ('Tipos de sono não encontrados');
-    }
+    await dadosPermanentesRef.set({
+      'sleep_session': {
+        'hora_inicio': inicio.toIso8601String(),
+        'hora_fim': fim.toIso8601String(),
+      },
+    }, SetOptions(merge: true));
+  } else {
+    await dadosPermanentesRef.set({
+      'sleep_session': {'status': 'no_data'},
+    }, SetOptions(merge: true));
+  }
 
-    //-x+x- Dados de exercício físico
-    final mapaAtividades = support.gerarMapaAtividades();
+  final Map<String, Map<String, dynamic>> mapaTiposSono = {};
 
-    final dadosWorkout = dadosContinuosWorkout.where((dado) => dado.type == HealthDataType.WORKOUT).toList();
+  for (int i = 0; i < outrosTipos.length; i++) {
+    final item = outrosTipos[i];
+    mapaTiposSono[i.toString()] = {
+      'hora_inicio': item.dateFrom.toIso8601String(),
+      'hora_fim': item.dateTo.toIso8601String(),
+      'tipo': item.type.toString().split('.').last,
+    };
+  }
 
-    if (dadosWorkout.isNotEmpty) {
-      final Map<String, Map<String, dynamic>> mapaWorkouts = {};
+  if (mapaTiposSono.isNotEmpty) {
+    await dadosPermanentesRef.set({
+      'sleep_types': mapaTiposSono,
+    }, SetOptions(merge: true));
+  } else {
+    await dadosPermanentesRef.set({
+      'sleep_types': {'status': 'no_data'},
+    }, SetOptions(merge: true));
+    debugPrint('Tipos de sono não encontrados');
+  }
 
-      for (int i = 0; i < dadosWorkout.length; i++) {
-        final item = dadosWorkout[i];
-        final workoutValue = item.value as WorkoutHealthValue;
+  //-x+x- Dados de exercício físico
+  final mapaAtividades = support.gerarMapaAtividades();
+  final dadosContinuosWorkout = await health.getHealthDataFromTypes(
+    startTime: startWorkout,
+    endTime: endWorkout,
+    types: [HealthDataType.WORKOUT],
+  );
+  final dadosWorkout =
+      dadosContinuosWorkout
+          .where((dado) => dado.type == HealthDataType.WORKOUT)
+          .toList();
 
-        final atividadeNome = workoutValue.workoutActivityType
-            ?.toString()
-            .split('.')
-            .last ??
-        'OTHER';
+  double duracaoExerciciosHoras = 0;
+  final Map<String, Map<String, dynamic>> mapaWorkouts = {};
 
-        final atividadeId = mapaAtividades.entries
-        .firstWhere(
-          (e) => e.key.toString().split('.').last == atividadeNome,
-          orElse: () =>
-              MapEntry(support.HealthWorkoutActivityType.OTHER, 0),
-        )
-        .value;
+  for (int i = 0; i < dadosWorkout.length; i++) {
+    final item = dadosWorkout[i];
+    final workoutValue = item.value as WorkoutHealthValue;
 
-        mapaWorkouts[i.toString()] = {
-          'hora_inicio': item.dateFrom.toIso8601String(),
-          'hora_fim': item.dateTo.toIso8601String(),
-          'atividade': atividadeId,
-        };
-      }
-      
-      await dadosPermanentesRef.set({
-        'workouts': mapaWorkouts,
-      }, SetOptions(merge: true));
-    } else {
-      await dadosPermanentesRef.set({
-          'workouts': {'status': 'no_data'},
-        }, SetOptions(merge: true));
+    final atividadeNome =
+        workoutValue.workoutActivityType?.toString().split('.').last ?? 'OTHER';
 
-      debugPrint('Nenhum dado de exercício físico encontrado');
-    }
+    final atividadeId =
+        mapaAtividades.entries
+            .firstWhere(
+              (e) => e.key.toString().split('.').last == atividadeNome,
+              orElse:
+                  () => MapEntry(support.HealthWorkoutActivityType.OTHER, 0),
+            )
+            .value;
+
+    mapaWorkouts[i.toString()] = {
+      'hora_inicio': item.dateFrom.toIso8601String(),
+      'hora_fim': item.dateTo.toIso8601String(),
+      'atividade': atividadeId,
+    };
+
+    duracaoExerciciosHoras +=
+        item.dateTo.difference(item.dateFrom).inMinutes / 60.0;
+  }
+
+  if (mapaWorkouts.isNotEmpty) {
+    await dadosPermanentesRef.set({
+      'workouts': mapaWorkouts,
+    }, SetOptions(merge: true));
+  } else {
+    await dadosPermanentesRef.set({
+      'workouts': {'status': 'no_data'},
+    }, SetOptions(merge: true));
+
+    debugPrint('Nenhum dado de exercício físico encontrado');
+  }
+
+  final totalDiarioRef = dadosPermanentesRef
+      .collection('total_diario')
+      .doc('totais');
+
+  Map<String, dynamic> totais = {};
+
+  totais['exercicios'] = {'duracao_horas': duracaoExerciciosHoras};
+
+  if (sleepSession.isNotEmpty) {
+    final duracaoSono =
+        sleepSession.first.dateTo
+            .difference(sleepSession.first.dateFrom)
+            .inMinutes /
+        60.0;
+    totais['sono'] = {'duracao_horas': duracaoSono};
+  }
+
+  await totalDiarioRef.set({'totais': totais}, SetOptions(merge: true));
+
+  debugPrint('Total diário continuo salvo com sucesso');
 }
-

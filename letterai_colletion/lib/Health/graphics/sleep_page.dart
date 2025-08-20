@@ -40,9 +40,9 @@ class _SleepPageState extends State<SleepPage> {
     final dataFiltrada = dia ?? _selectedDay;
 
     if (modoDiario) {
-          return buscarSonoDiario(userId!);
+      return buscarSonoDiario(userId!);
     } else {
-        return buscarSonoPermanente(userId!, dia: dataFiltrada);
+      return buscarSonoPermanente(userId!, dia: dataFiltrada);
     }
   }
 
@@ -60,6 +60,47 @@ class _SleepPageState extends State<SleepPage> {
         body: Center(child: Text('Você precisa estar logado')),
       );
     }
+
+    // Função auxiliar para exibir a duração do sono e horários
+    Widget construirSono(List<String> dadosSono, String totalSono) {
+      final inicio = DateTime.tryParse(dadosSono[0]) ?? DateTime.now();
+      final fim = DateTime.tryParse(dadosSono[1]) ?? DateTime.now();
+      final fimAjustado =
+          fim.isBefore(inicio) ? fim.add(const Duration(days: 1)) : fim;
+
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Duração do sono: $totalSono h',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView(
+                children: [
+                  ListTile(
+                    title: const Text('Início do sono'),
+                    trailing: Text(
+                      '${inicio.hour.toString().padLeft(2, '0')}:${inicio.minute.toString().padLeft(2, '0')}',
+                    ),
+                  ),
+                  ListTile(
+                    title: const Text('Fim do sono'),
+                    trailing: Text(
+                      '${fimAjustado.hour.toString().padLeft(2, '0')}:${fimAjustado.minute.toString().padLeft(2, '0')}',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Suas métricas')),
       body: Column(
@@ -115,7 +156,6 @@ class _SleepPageState extends State<SleepPage> {
               ),
             ),
           ),
-          
           if (!modoDiario)
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -125,7 +165,6 @@ class _SleepPageState extends State<SleepPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      // Setinha para o dia anterior
                       IconButton(
                         icon: const Icon(Icons.arrow_back),
                         onPressed: () {
@@ -139,8 +178,6 @@ class _SleepPageState extends State<SleepPage> {
                           });
                         },
                       ),
-
-                      // Data centralizada
                       Expanded(
                         child: Center(
                           child: TextButton(
@@ -156,8 +193,6 @@ class _SleepPageState extends State<SleepPage> {
                           ),
                         ),
                       ),
-
-                      // Setinha para o próximo dia
                       IconButton(
                         icon: const Icon(Icons.arrow_forward),
                         onPressed: () {
@@ -173,8 +208,6 @@ class _SleepPageState extends State<SleepPage> {
                       ),
                     ],
                   ),
-
-                  // Calendário abaixo da data
                   if (mostrarCalendario)
                     CalendarCarousel<Event>(
                       selectedDateTime: _selectedDay,
@@ -197,8 +230,6 @@ class _SleepPageState extends State<SleepPage> {
                 ],
               ),
             ),
-
-          //Carrega os dados
           Expanded(
             child: FutureBuilder<List<String>>(
               future: dadosFuturo,
@@ -206,60 +237,20 @@ class _SleepPageState extends State<SleepPage> {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(child: CircularProgressIndicator());
                 }
-
                 if (snapshot.hasError) {
                   return Center(child: Text('Erro: ${snapshot.error}'));
                 }
-
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
                   return const Center(child: Text('Nenhum dado encontrado'));
                 }
 
                 final dadosSono = snapshot.data!;
-                final inicio = DateTime.tryParse(dadosSono[0]) ?? DateTime.now();
-                final fim = DateTime.tryParse(dadosSono[1]) ?? DateTime.now();
+                final totalSono =
+                    modoDiario
+                        ? totalSonoDiario.toString()
+                        : totalSonoPerm.toString();
 
-                final fimAjustado = fim.isBefore(inicio) ? fim.add(const Duration(days: 1)) : fim;
-
-                final duracao = fimAjustado.difference(inicio);
-                final horas = duracao.inHours;
-                final minutos = duracao.inMinutes % 60;
-
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Duracão do sono: $horas h $minutos min',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox( height: 20),
-
-                      Expanded(
-                        child: ListView(
-                          children: [
-                            ListTile(
-                              title: const Text('Início do sono'),
-                              trailing: Text(
-                                '${inicio.hour.toString().padLeft(2, '0')}:${inicio.minute.toString().padLeft(2, '0')}',
-                              ),
-                            ),
-                            ListTile(
-                              title: const Text('Fim do sono'),
-                              trailing: Text(
-                                '${fimAjustado.hour.toString().padLeft(2, '0')}:${fimAjustado.minute.toString().padLeft(2, '0')}',
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return construirSono(dadosSono, totalSono);
               },
             ),
           ),

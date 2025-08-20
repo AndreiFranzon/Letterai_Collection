@@ -58,33 +58,39 @@ enum AppState {
 class HealthPageState extends State<HealthPage> {
   List<HealthDataPoint> _healthDataList = [];
   AppState _state = AppState.DATA_NOT_FETCHED;
+  final GlobalKey<ScaffoldMessengerState> _scaffoldMessengerKey =
+      GlobalKey<ScaffoldMessengerState>();
   int _nofSteps = 0;
   List<RecordingMethod> recordingMethodsToFilter = [];
 
   // All types available depending on platform (iOS ot Android).
-  List<HealthDataType> get types => (Platform.isAndroid)
-      ? dataTypesAndroid
-      : (Platform.isIOS)
+  List<HealthDataType> get types =>
+      (Platform.isAndroid)
+          ? dataTypesAndroid
+          : (Platform.isIOS)
           ? dataTypesIOS
           : [];
 
-  List<HealthDataAccess> get permissions => types
-      .map((type) =>
-          // can only request READ permissions to the following list of types on iOS
-          [
-            HealthDataType.APPLE_MOVE_TIME,
-            HealthDataType.APPLE_STAND_HOUR,
-            HealthDataType.APPLE_STAND_TIME,
-            HealthDataType.WALKING_HEART_RATE,
-            HealthDataType.ELECTROCARDIOGRAM,
-            HealthDataType.HIGH_HEART_RATE_EVENT,
-            HealthDataType.LOW_HEART_RATE_EVENT,
-            HealthDataType.IRREGULAR_HEART_RATE_EVENT,
-            HealthDataType.EXERCISE_TIME,
-          ].contains(type)
-              ? HealthDataAccess.READ
-              : HealthDataAccess.READ_WRITE)
-      .toList();
+  List<HealthDataAccess> get permissions =>
+      types
+          .map(
+            (type) =>
+                // can only request READ permissions to the following list of types on iOS
+                [
+                      HealthDataType.APPLE_MOVE_TIME,
+                      HealthDataType.APPLE_STAND_HOUR,
+                      HealthDataType.APPLE_STAND_TIME,
+                      HealthDataType.WALKING_HEART_RATE,
+                      HealthDataType.ELECTROCARDIOGRAM,
+                      HealthDataType.HIGH_HEART_RATE_EVENT,
+                      HealthDataType.LOW_HEART_RATE_EVENT,
+                      HealthDataType.IRREGULAR_HEART_RATE_EVENT,
+                      HealthDataType.EXERCISE_TIME,
+                    ].contains(type)
+                    ? HealthDataAccess.READ
+                    : HealthDataAccess.READ_WRITE,
+          )
+          .toList();
 
   @override
   void initState() {
@@ -94,10 +100,7 @@ class HealthPageState extends State<HealthPage> {
 
     super.initState();
 
-    Workmanager().initialize(
-      callbackDispatcher,
-      isInDebugMode: true,
-    );
+    Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
 
     _registrarAgendamento();
   }
@@ -105,51 +108,64 @@ class HealthPageState extends State<HealthPage> {
   Future<void> _registrarAgendamento() async {
     final now = DateTime.now();
 
-    final proximaExecucao = DateTime(now.year, now.month, now.day, 0, 5)
-      .add(const Duration(days: 1));
+    final proximaExecucao = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      0,
+      5,
+    ).add(const Duration(days: 1));
 
     final delay = proximaExecucao.difference(now);
 
     await Workmanager().registerPeriodicTask(
       "sync-task-id",
       syncTaskName,
-      frequency:  const Duration(hours: 24),
+      frequency: const Duration(hours: 24),
       initialDelay: delay,
-      constraints: Constraints(
-        networkType: NetworkType.connected,
-        ),
-      );
+      constraints: Constraints(networkType: NetworkType.connected),
+    );
   }
 
   Future<void> installHealthConnect() async =>
       await health.installHealthConnect();
 
   Future<bool> verificarPermissoes(BuildContext context) async {
-  if (!Platform.isAndroid) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Apenas Android é suportado no momento.")),
+    if (!Platform.isAndroid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Apenas Android é suportado no momento.")),
+      );
+      return false;
+    }
+
+    final temPermissoes = await health.hasPermissions(
+      types,
+      permissions: permissions,
     );
-    return false;
-  }
 
-  final temPermissoes = await health.hasPermissions(types, permissions: permissions);
-
-  if (temPermissoes != true) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          "Permissões do Google Health não ativadas. Por favor, ative para sincronizar os dados.",
+    if (temPermissoes != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "Permissões do Google Health não ativadas. Por favor, ative para sincronizar os dados.",
+          ),
         ),
-      ),
-    );
-    return false;
-  }
+      );
+      return false;
+    }
 
-  return true;
+    return true;
   }
 
   Future<void> sincronizarTudo() async {
     setState(() => _state = AppState.FETCHING_DATA);
+
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      const SnackBar(
+        content: Text('Sincronizando seus dados, aguarde um instante'),
+        duration: Duration(minutes: 5),
+      ),
+    );
 
     final permissoesOk = await verificarPermissoes(context);
     if (!permissoesOk) {
@@ -161,10 +177,18 @@ class HealthPageState extends State<HealthPage> {
     await sincronizarDadosContinuos();
 
     setState(() => _state = AppState.DATA_READY);
+    _scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
   }
 
   Future<void> sincronizarTudoPerm() async {
     setState(() => _state = AppState.FETCHING_DATA);
+
+    _scaffoldMessengerKey.currentState?.showSnackBar(
+      const SnackBar(
+        content: Text('Sincronizando seus dados, aguarde um instante'),
+        duration: Duration(minutes: 5),
+      ),
+    );
 
     final permissoesOk = await verificarPermissoes(context);
     if (!permissoesOk) {
@@ -176,84 +200,111 @@ class HealthPageState extends State<HealthPage> {
     await sincronizarDadosContinuosPermanentes();
 
     setState(() => _state = AppState.DATA_READY);
+    _scaffoldMessengerKey.currentState?.hideCurrentSnackBar();
   }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(
-          title: const Text('Saúde'),
-        ),
-        body: Column(
-          children: [
+      home: ScaffoldMessenger(
+        key: _scaffoldMessengerKey,
+        child: Scaffold(
+          appBar: AppBar(title: const Text('Saúde')),
+          body: Column(
+            children: [
               ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const MetricsPage()),
-                  );
-                },
+                onPressed:
+                    _state == AppState.FETCHING_DATA
+                        ? null
+                        : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const MetricsPage(),
+                            ),
+                          );
+                        },
                 child: const Text('Ver Métricas'),
               ),
               ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (_) => const SleepPage()),
-                  );
-                },
+                onPressed:
+                    _state == AppState.FETCHING_DATA
+                        ? null
+                        : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const SleepPage(),
+                            ),
+                          );
+                        },
                 child: const Text('Sono'),
               ),
-          ],
-        ),
-        floatingActionButton: Builder(
-          builder: (context) => FloatingActionButton(
-            child: const Icon(Icons.menu),
-            onPressed: () async {
-              final RenderBox button = context.findRenderObject() as RenderBox;
-              final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+            ],
+          ),
+          floatingActionButton: Builder(
+            builder:
+                (context) => FloatingActionButton(
+                  child: const Icon(Icons.menu),
+                  onPressed: () async {
+                    final RenderBox button =
+                        context.findRenderObject() as RenderBox;
+                    final overlay =
+                        Overlay.of(context).context.findRenderObject()
+                            as RenderBox;
 
-              final Offset buttonTopLeft = button.localToGlobal(Offset.zero, ancestor: overlay);
-              // Calculate the bottom-right point of the button in global coordinates
-              final Offset buttonBottomRight = button.localToGlobal(button.size.bottomRight(Offset.zero), ancestor: overlay);
+                    final Offset buttonTopLeft = button.localToGlobal(
+                      Offset.zero,
+                      ancestor: overlay,
+                    );
+                    // Calculate the bottom-right point of the button in global coordinates
+                    final Offset buttonBottomRight = button.localToGlobal(
+                      button.size.bottomRight(Offset.zero),
+                      ancestor: overlay,
+                    );
 
+                    const double verticalOffset = 120.0;
 
-              const double verticalOffset = 120.0;
+                    final result = await showMenu<String>(
+                      context: context,
+                      position: RelativeRect.fromRect(
+                        Rect.fromPoints(
+                          buttonTopLeft.translate(
+                            0,
+                            -verticalOffset,
+                          ), // Move the top-left point up
+                          buttonBottomRight.translate(
+                            0,
+                            -verticalOffset,
+                          ), // Move the bottom-right point up
+                        ),
+                        Offset.zero & overlay.size,
+                      ),
+                      items: [
+                        const PopupMenuItem(
+                          value: 'health',
+                          child: Text('Health'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'sync',
+                          child: Text('Sincronizar'),
+                        ),
+                        const PopupMenuItem(
+                          value: 'sync_pem',
+                          child: Text('SincronizarPerm'),
+                        ),
+                      ],
+                    );
 
-              final result = await showMenu<String>(
-                context: context,
-                position: RelativeRect.fromRect(
-                  Rect.fromPoints(
-                   buttonTopLeft.translate(0, -verticalOffset), // Move the top-left point up
-                  buttonBottomRight.translate(0, -verticalOffset), // Move the bottom-right point up
+                    if (result == 'health') {
+                      installHealthConnect();
+                    } else if (result == 'sync') {
+                      sincronizarTudo();
+                    } else if (result == 'sync_pem') {
+                      sincronizarTudoPerm();
+                    }
+                  },
                 ),
-                  Offset.zero & overlay.size,
-                ),
-                items: [
-                  const PopupMenuItem(
-                    value: 'health',
-                    child: Text('Health'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'sync',
-                    child: Text('Sincronizar'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'sync_pem',
-                    child: Text('SincronizarPerm'),
-                  ),
-                ],
-              );
-
-              if (result == 'health') {
-                installHealthConnect();
-              } else if (result == 'sync') {
-                sincronizarTudo();
-              } else if (result == 'sync_pem'){
-                sincronizarTudoPerm();
-              }
-            },
           ),
         ),
       ),

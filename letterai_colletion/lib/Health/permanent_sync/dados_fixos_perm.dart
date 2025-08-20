@@ -12,8 +12,9 @@ final health = Health();
 
 Future<void> sincronizarDadosFixosPermantentes () async {
     final now = DateTime.now();
-    final startDate = DateTime(now.year, now.month, now.day -1, 0, 0, 0);
-    final endDate = DateTime(now.year, now.month, now.day - 1, 23, 59, 59);
+    final diaAlvo = now.subtract(const Duration(days:1));
+    final startDate = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day,  0, 0, 0);
+    final endDate = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day, 23, 59, 59);
     final padraoHoraFormatada = now.subtract(const Duration(hours: 24));
 
     List<HealthDataType> tiposPorHora = (Platform.isAndroid ? dataTypesAndroid : dataTypesIOS)
@@ -32,7 +33,6 @@ Future<void> sincronizarDadosFixosPermantentes () async {
       }
 
       final uuid = user.uid;
-
       final dataFormatada = DateFormat('yyyy-MM-dd').format(padraoHoraFormatada);
 
       final docRef = FirebaseFirestore.instance.collection('usuarios').doc(uuid).collection('dados_permanentes').doc(dataFormatada);
@@ -56,6 +56,7 @@ Future<void> sincronizarDadosFixosPermantentes () async {
       );
 
       Map<String, List<HealthDataPoint>> dadosAgrupados = {};
+      Map<String, double> totaisDia = {};
 
       for (var data in dadosPorHora) {
         final hora = data.dateFrom.hour.toString().padLeft(2, '0');
@@ -68,11 +69,15 @@ Future<void> sincronizarDadosFixosPermantentes () async {
         final dados = entrada.value;
 
         List<Map<String, dynamic>> dadosConvertidos = dados.map((dado) {
+          final valor = (dado.value is NumericHealthValue)
+            ? (dado.value as NumericHealthValue).numericValue
+            : double.tryParse(dado.value.toString()) ?? 0.0;
+
+          totaisDia[dado.typeString] = (totaisDia[dado.typeString] ?? 0) + valor;
+
           return {
             'tipo': dado.typeString,
-            'valor': (dado.value is NumericHealthValue)
-             ? (dado.value as NumericHealthValue).numericValue 
-             : dado.value.toString(),
+            'valor': valor,
             'fim': dado.dateTo.toIso8601String(),
             'inicio': dado.dateFrom.toIso8601String(),
           };
@@ -85,6 +90,14 @@ Future<void> sincronizarDadosFixosPermantentes () async {
 
         debugPrint('Dados salvos na hora $hora');
       }
+
+      final totalDiarioRef = docRef.collection('total_diario').doc('totais');
+      await totalDiarioRef.set({
+        'totais_atividade': totaisDia,
+        'sincronizado_em': Timestamp.now(),
+      });
+
+      debugPrint('Total diário de dados fixos permanentes salvo');
     } catch (e) {
       debugPrint('Erro ao sincronizar dados: $e');
     }

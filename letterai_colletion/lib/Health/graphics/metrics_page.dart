@@ -100,7 +100,71 @@ class _MetricsPageState extends State<MetricsPage> {
       );
     }
 
-    //String dataFormatada = DateFormat('dd-MM-yyyy').format(_selectedDay);
+    // Função auxiliar para exibir total + lista de dados
+    Widget construirLista(List<int> valoresPorHora, String total, String tipo) {
+      return Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          children: [
+            Text(
+              tipo == 'STEPS'
+                  ? 'Passos total: $total'
+                  : tipo == 'TOTAL_CALORIES_BURNED'
+                  ? 'Calorias total: $total'
+                  : tipo == 'DISTANCE_DELTA'
+                  ? 'Distância total: $total'
+                  : tipo == 'WORKOUTS'
+                  ? 'Exercício total: $total h'
+                  : '',
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 20),
+            Expanded(
+              child: ListView.builder(
+                itemCount:
+                    tipo != 'WORKOUTS'
+                        ? valoresPorHora.length
+                        : valoresPorHora.length ~/ 3,
+                itemBuilder: (context, i) {
+                  if (tipo != 'WORKOUTS') {
+                    return ListTile(
+                      title: Text('${i.toString().padLeft(2, '0')}h'),
+                      trailing: Text(
+                        tipo == 'STEPS'
+                            ? '${valoresPorHora[i]} passos'
+                            : tipo == 'TOTAL_CALORIES_BURNED'
+                            ? '${valoresPorHora[i]} kcal'
+                            : '${valoresPorHora[i]} m',
+                      ),
+                    );
+                  } else {
+                    final atividade = valoresPorHora[i * 3];
+                    final inicio = valoresPorHora[i * 3 + 1];
+                    final fim = valoresPorHora[i * 3 + 2];
+
+                    String formatarHora(int hhmm) {
+                      final h = hhmm ~/ 100;
+                      final m = hhmm % 100;
+                      return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
+                    }
+
+                    final nomeAtividade =
+                        mapaAtividades[atividade] ?? 'Exercício desconhecido';
+
+                    return ListTile(
+                      title: Text(nomeAtividade),
+                      subtitle: Text(
+                        'Início: ${formatarHora(inicio)}, Fim: ${formatarHora(fim)}',
+                      ),
+                    );
+                  }
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Scaffold(
       appBar: AppBar(title: const Text('Suas métricas')),
@@ -270,71 +334,28 @@ class _MetricsPageState extends State<MetricsPage> {
                 }
 
                 final valoresPorHora = snapshot.data!;
-                final total = valoresPorHora.fold(0, (sum, val) => sum + val);
-
-                return Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      Text(
-                        tipoSelecionado == 'STEPS'
-                            ? 'Passos total: $total'
+                final total =
+                    modoDiario
+                        ? tipoSelecionado == 'STEPS'
+                            ? totalPassosDiario.toString()
                             : tipoSelecionado == 'TOTAL_CALORIES_BURNED'
-                            ? 'Calorias total: $total'
+                            ? totalCaloriasDiarias.toString()
                             : tipoSelecionado == 'DISTANCE_DELTA'
-                            ? 'Distância total: $total'
-                            : '',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      Expanded(
-                        child: ListView.builder(
-                          itemCount:
-                              tipoSelecionado != 'WORKOUTS'
-                                  ? valoresPorHora.length
-                                  : valoresPorHora.length ~/ 3,
-                          itemBuilder: (context, i) {
-                            if (tipoSelecionado != 'WORKOUTS') {
-                              return ListTile(
-                                title: Text('${i.toString().padLeft(2, '0')}h'),
-                                trailing: Text(
-                                  tipoSelecionado == 'STEPS'
-                                      ? '${valoresPorHora[i]} passos'
-                                      : tipoSelecionado ==
-                                          'TOTAL_CALORIES_BURNED'
-                                      ? '${valoresPorHora[i]} kcal'
-                                      : '${valoresPorHora[i]} m',
-                                ),
-                              );
-                            } else {
-                              final atividade = valoresPorHora[i * 3];
-                              final inicio = valoresPorHora[i * 3 + 1];
-                              final fim = valoresPorHora[i * 3 + 2];
+                            ? totalDistanciaDiaria.toString()
+                            : tipoSelecionado == 'WORKOUTS'
+                            ? totalExercicioDiario.toString()
+                            : '0'
+                        : tipoSelecionado == 'STEPS'
+                        ? totalPassosPerm.toString()
+                        : tipoSelecionado == 'TOTAL_CALORIES_BURNED'
+                        ? totalCaloriasPerm.toString()
+                        : tipoSelecionado == 'DISTANCE_DELTA'
+                        ? totalDistanciaPerm.toString()
+                        : tipoSelecionado == 'WORKOUTS'
+                        ? totalExercicioPerm.toString()
+                        : '0';
 
-                              String formatarHora(int hhmm) {
-                                final h = hhmm ~/ 100;
-                                final m = hhmm % 100;
-                                return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}';
-                              }
-
-                              final nomeAtividade = mapaAtividades[atividade] ?? 'Exercício desconhecido';
-
-                              return ListTile(
-                                title: Text(nomeAtividade),
-                                subtitle: Text(
-                                  'Início: ${formatarHora(inicio)}, Fim: ${formatarHora(fim)}',
-                                ),
-                              );
-                            }
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-                );
+                return construirLista(valoresPorHora, total, tipoSelecionado);
               },
             ),
           ),
