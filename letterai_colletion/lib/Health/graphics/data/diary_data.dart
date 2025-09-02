@@ -127,28 +127,39 @@ Future<List<int>> buscarDistanciaDiaria(String userId) async {
 }
 
 Future<List<String>> buscarSonoDiario(String userId) async {
-  List<String> duracaoSono = ['', ''];
-
   double totalDiarioSono = await buscarTotalSonoDiario(userId);
-
   totalSonoDiario = totalDiarioSono;
 
-  final doc =
-      await FirebaseFirestore.instance
-          .collection('usuarios')
-          .doc(userId)
-          .collection('dados_diarios')
-          .doc('sleep_session')
-          .get();
+  try {
+    final doc =
+        await FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(userId)
+            .collection('dados_diarios')
+            .doc('sleep_session')
+            .get();
 
-  if (!doc.exists) return duracaoSono;
+    if (!doc.exists) {
+      return [];
+    }
 
-  final data = doc.data() ?? {};
+    final data = doc.data();
+    if (data == null) {
+      return [];
+    }
 
-  final inicio = (data['hora_inicio'] as String?) ?? '';
-  final fim = (data['hora_fim'] as String?) ?? '';
+    final inicio = data['hora_inicio'] as String?;
+    final fim = data['hora_fim'] as String?;
 
-  return [inicio, fim];
+    if (inicio != null && inicio.isNotEmpty && fim != null && fim.isNotEmpty) {
+      return [inicio, fim];
+    } else {
+      return [];
+    }
+  } catch (e) {
+    print('Erro ao buscar dados de sono: $e');
+    return [];
+  }
 }
 
 Future<List<int>> buscarExercicioDiario(String userId) async {

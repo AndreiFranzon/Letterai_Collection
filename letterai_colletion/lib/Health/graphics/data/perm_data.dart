@@ -321,9 +321,9 @@ Future<double> buscarTotalExercicio(String userId, String? dataDoc) async {
     if (data == null || !data.containsKey('totais')) return 0.0;
 
     final totaisMap = data['totais'] as Map<String, dynamic>;
-    if (!totaisMap.containsKey('exercícios')) return 0.0;
+    if (!totaisMap.containsKey('exercicios')) return 0.0;
  
-    final exerciciosMap = totaisMap['exercícios'] as Map<String, dynamic>;
+    final exerciciosMap = totaisMap['exercicios'] as Map<String, dynamic>;
     final valor = exerciciosMap['duracao_horas'];
 
     if (valor is double) return valor;
