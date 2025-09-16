@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
 import 'package:letterai_colletion/Health/support/util.dart';
@@ -35,36 +37,36 @@ enum AppState {
 }
 
 // All types available depending on platform (iOS ot Android).
-  List<HealthDataType> get types =>
-      (Platform.isAndroid)
-          ? dataTypesAndroid
-          : (Platform.isIOS)
-          ? dataTypesIOS
-          : [];
+List<HealthDataType> get types =>
+    (Platform.isAndroid)
+        ? dataTypesAndroid
+        : (Platform.isIOS)
+        ? dataTypesIOS
+        : [];
 
-  List<HealthDataAccess> get permissions =>
-      types
-          .map(
-            (type) =>
-                // can only request READ permissions to the following list of types on iOS
-                [
-                      HealthDataType.APPLE_MOVE_TIME,
-                      HealthDataType.APPLE_STAND_HOUR,
-                      HealthDataType.APPLE_STAND_TIME,
-                      HealthDataType.WALKING_HEART_RATE,
-                      HealthDataType.ELECTROCARDIOGRAM,
-                      HealthDataType.HIGH_HEART_RATE_EVENT,
-                      HealthDataType.LOW_HEART_RATE_EVENT,
-                      HealthDataType.IRREGULAR_HEART_RATE_EVENT,
-                      HealthDataType.EXERCISE_TIME,
-                    ].contains(type)
-                    ? HealthDataAccess.READ
-                    : HealthDataAccess.READ_WRITE,
-          )
-          .toList();
+List<HealthDataAccess> get permissions =>
+    types
+        .map(
+          (type) =>
+              // can only request READ permissions to the following list of types on iOS
+              [
+                    HealthDataType.APPLE_MOVE_TIME,
+                    HealthDataType.APPLE_STAND_HOUR,
+                    HealthDataType.APPLE_STAND_TIME,
+                    HealthDataType.WALKING_HEART_RATE,
+                    HealthDataType.ELECTROCARDIOGRAM,
+                    HealthDataType.HIGH_HEART_RATE_EVENT,
+                    HealthDataType.LOW_HEART_RATE_EVENT,
+                    HealthDataType.IRREGULAR_HEART_RATE_EVENT,
+                    HealthDataType.EXERCISE_TIME,
+                  ].contains(type)
+                  ? HealthDataAccess.READ
+                  : HealthDataAccess.READ_WRITE,
+        )
+        .toList();
 
 Future<void> installHealthConnect() async =>
-      await health.installHealthConnect();
+    await health.installHealthConnect();
 
 Future<bool> verificarPermissoes() async {
   if (!Platform.isAndroid) {
@@ -96,25 +98,58 @@ Future<void> sincronizarTudo({required Function(bool) sync}) async {
   sync(false);
 }
 
-
-  Future<void> sincronizarTudoPerm({required Function(bool) sync}) async {
+Future<void> sincronizarTudoPerm({required Function(bool) sync}) async {
   sync(true);
-  
+
   final permissoesOk = await verificarPermissoes();
   if (!permissoesOk) {
     installHealthConnect();
-  }
-
-  await sincronizarDadosFixosPermantentes();
-  await sincronizarDadosContinuosPermanentes();
-
-  try {
-    final pontosAmarelos = await calcularPontosAmarelos();
-    final pontosRoxos = await calcularPontosRoxos();
     sync(false);
-    
-    debugPrint("Pontuação final do dia: ${pontosAmarelos + pontosRoxos}");
-  } catch (e) {
-    debugPrint("Erro ao calcular pontos: $e");
+    return;
   }
+
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) {
+    sync(false);
+    return;
+  }
+
+  final userId = user.uid;
+
+  final ultimoDocSnapshot =
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(userId)
+          .collection('dados_permanentes')
+          .orderBy(FieldPath.documentId, descending: true)
+          .limit(1)
+          .get();
+
+  DateTime diaAlvo;
+  if (ultimoDocSnapshot.docs.isEmpty) {
+    diaAlvo = DateTime.now().subtract(const Duration(days: 1));
+  } else {
+    final ultimoDiaId = ultimoDocSnapshot.docs.first.id;
+    diaAlvo = DateTime.parse(ultimoDiaId).add(const Duration(days: 1));
+  }
+
+  final ontem = DateTime.now().subtract(const Duration(days: 1));
+
+  while (!diaAlvo.isAfter(ontem)) {
+    await sincronizarDadosFixosPermantentes(diaAlvo);
+    await sincronizarDadosContinuosPermanentes(diaAlvo);
+
+    try {
+      final pontosAmarelos = await calcularPontosAmarelos(diaAlvo);
+      final pontosRoxos = await calcularPontosRoxos(diaAlvo);
+
+      debugPrint("Pontuação final do dia: ${pontosAmarelos + pontosRoxos}");
+    } catch (e) {
+      debugPrint("Erro ao calcular pontos: $e");
+    }
+
+    diaAlvo = diaAlvo.add(const Duration(days: 1));
+  }
+
+  sync(false);
 }

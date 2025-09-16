@@ -34,7 +34,7 @@ Future<String?> buscarUltimaData() async {
   return querySnapshot.docs.first.id;
 }
 
-Future<Map<String, dynamic>> buscarMetricas() async {
+Future<Map<String, dynamic>> buscarMetricas(DateTime diaAlvo) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     debugPrint('Usuário não está logado');
@@ -48,7 +48,7 @@ Future<Map<String, dynamic>> buscarMetricas() async {
   }
 
   final String userId = user.uid;
-  String? dataDoc = await buscarUltimaData();
+  String dataDoc = DateFormat('yyyy-MM-dd').format(diaAlvo);
   
   try {
     //Busca os dados
@@ -77,16 +77,17 @@ Future<Map<String, dynamic>> buscarMetricas() async {
   }
 }
 
-Future<int> calcularPontosAmarelos() async {
+Future<int> calcularPontosAmarelos(DateTime diaAlvo) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     return 0;
   }
 
   final String userId = user.uid;
-  final String dataDoc = await buscarUltimaData() ?? '';
+  String dataDoc = DateFormat('yyyy-MM-dd').format(diaAlvo);
 
-  final metricas = await buscarMetricas();
+
+  final metricas = await buscarMetricas(diaAlvo);
 
   final passos = metricas['passos'] ?? 0;
   final calorias = metricas['calorias'] ?? 0;
@@ -111,16 +112,16 @@ Future<int> calcularPontosAmarelos() async {
   return pontuacaoFinal;
 }
 
-Future<int> calcularPontosRoxos() async {
+Future<int> calcularPontosRoxos(DateTime diaAlvo) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     return 0;
   }
 
   final String userId = user.uid;
-  final String dataDoc = await buscarUltimaData() ?? '';
+  String dataDoc = DateFormat('yyyy-MM-dd').format(diaAlvo);
 
-  final metricas = await buscarMetricas();
+  final metricas = await buscarMetricas(diaAlvo);
   final sono = metricas['sono'] ?? 0.0;
 
   double pontuacaoBase = sono * 20;

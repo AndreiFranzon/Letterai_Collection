@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:letterai_colletion/Health/health_page.dart';
 import 'package:letterai_colletion/Menu/config_page.dart';
 import 'package:letterai_colletion/Profile/profile_page.dart';
+import 'package:letterai_colletion/Store/store_page.dart';
 
 class MenuPage extends StatelessWidget {
   const MenuPage({super.key});
@@ -58,7 +59,7 @@ class MenuPage extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const ConfigPage(),
+                    builder: (context) => const StorePage(),
                     fullscreenDialog: true, // ajuda a dar ideia de “modal”, opcional
                   ),
                 );

@@ -29,7 +29,7 @@ import 'package:letterai_colletion/Database_Support/exercise_data.dart';
 const String syncTaskName = "sync_dados_permanentes";
 final health = Health();
 
-@pragma('vm:entry-point')
+/*@pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     if (task == syncTaskName) {
@@ -38,7 +38,7 @@ void callbackDispatcher() {
     }
     return Future.value(true);
   });
-}
+}*/
 
 class HealthPage extends StatefulWidget {
   const HealthPage({super.key});
@@ -58,7 +58,7 @@ class HealthPageState extends State<HealthPage> {
 
     super.initState();
 
-    Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
+    //Workmanager().initialize(callbackDispatcher, isInDebugMode: true);
 
     _registrarAgendamento();
 

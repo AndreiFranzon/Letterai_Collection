@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 //import 'package:letterai_colletion/Login/login_page.dart';
 import 'package:letterai_colletion/Login/auth_service.dart';
 import 'package:letterai_colletion/Profile/daily_goal.dart';
+import 'package:letterai_colletion/Profile/inventory.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -29,6 +30,18 @@ class ProfilePage extends StatelessWidget {
                 );
               },
               child:  const Text('Metas diárias'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => InventoryPage(),
+                    fullscreenDialog: true, // ajuda a dar ideia de “modal”, opcional
+                  ),
+                );
+              },
+              child:  const Text('Inventário'),
             ),
           ],
         ),

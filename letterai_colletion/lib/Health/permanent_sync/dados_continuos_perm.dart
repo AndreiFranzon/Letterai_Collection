@@ -1,9 +1,9 @@
 import 'dart:async';
-import 'dart:io';
+//import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
-import 'package:letterai_colletion/Health/support/util.dart';
+//import 'package:letterai_colletion/Health/support/util.dart';
 import 'package:letterai_colletion/Health/support/acitivities.dart' as support;
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -11,14 +11,14 @@ import 'package:intl/intl.dart';
 
 final health = Health();
 
-Future<void> sincronizarDadosContinuosPermanentes() async {
-  final now = DateTime.now();
-  final diaAlvo = now.subtract(const Duration(days: 1));
+Future<void> sincronizarDadosContinuosPermanentes(DateTime diaAlvo) async {
+
   final startSono = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day -1, 18, 0, 0);
   final endSono = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day, 23, 59, 59);
+  
   final startWorkout = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day,  0, 0, 0);
   final endWorkout = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day, 23, 59, 59);
-  final padraoHoraFormatada = now.subtract(const Duration(hours: 24));
+
 
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
@@ -27,7 +27,7 @@ Future<void> sincronizarDadosContinuosPermanentes() async {
   }
 
   final userId = user.uid;
-  final dataFormatada = DateFormat('yyyy-MM-dd').format(padraoHoraFormatada);
+  final dataFormatada = DateFormat('yyyy-MM-dd').format(diaAlvo);
   final dadosPermanentesRef = FirebaseFirestore.instance
       .collection('usuarios')
       .doc(userId)

@@ -10,12 +10,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 final health = Health();
 
-Future<void> sincronizarDadosFixosPermantentes () async {
-    final now = DateTime.now();
-    final diaAlvo = now.subtract(const Duration(days:1));
+Future<void> sincronizarDadosFixosPermantentes (DateTime diaAlvo) async {
     final startDate = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day,  0, 0, 0);
     final endDate = DateTime(diaAlvo.year, diaAlvo.month, diaAlvo.day, 23, 59, 59);
-    final padraoHoraFormatada = now.subtract(const Duration(hours: 24));
 
     List<HealthDataType> tiposPorHora = (Platform.isAndroid ? dataTypesAndroid : dataTypesIOS)
       .where((type) =>
@@ -33,7 +30,7 @@ Future<void> sincronizarDadosFixosPermantentes () async {
       }
 
       final uuid = user.uid;
-      final dataFormatada = DateFormat('yyyy-MM-dd').format(padraoHoraFormatada);
+      final dataFormatada = DateFormat('yyyy-MM-dd').format(diaAlvo);
 
       final docRef = FirebaseFirestore.instance.collection('usuarios').doc(uuid).collection('dados_permanentes').doc(dataFormatada);
       final docSnapshot = await docRef.get();

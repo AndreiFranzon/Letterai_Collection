@@ -75,6 +75,11 @@ flutter:
     - assets/sprites_sistema/calories.png
     - assets/sprites_sistema/distance.png
     - assets/sprites_sistema/steps.png
+    - assets/back_cards/
+    - assets/front_cards/
+    - assets/boosters/
+    - assets/energies/
+    - assets/front_cards_bw/
 
   # To add assets to your application, add an assets section, like this:
   # assets:
