@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:letterai_colletion/Database_Support/pontos_provider.dart';
+import 'package:letterai_colletion/Friends/friends_page.dart';
 //import 'package:firebase_auth/firebase_auth.dart';
 //import 'package:google_sign_in/google_sign_in.dart';
 //import 'package:letterai_colletion/Login/login_page.dart';
@@ -71,37 +72,61 @@ class ProfilePage extends StatelessWidget {
                 ],
               ),
       ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ElevatedButton(
-              onPressed: () {
+      body: Stack(
+        children: [
+          // Conteúdo central (Metas e Inventário)
+          Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DailyGoalPage(),
+                        fullscreenDialog: true,
+                      ),
+                    );
+                  },
+                  child: const Text('Metas diárias'),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => InventoryPage(),
+                        fullscreenDialog: true,
+                      ),
+                    );
+                  },
+                  child: const Text('Inventário'),
+                ),
+              ],
+            ),
+          ),
+
+          // Botão de amigos no topo direito, abaixo da AppBar
+          Positioned(
+            top: -8, // logo abaixo da AppBar
+            right: 16,
+            child: GestureDetector(
+              onTap: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(
-                    builder: (context) => DailyGoalPage(),
-                    fullscreenDialog: true, // efeito de modal
-                  ),
+                  MaterialPageRoute(builder: (context) => const FriendsPage()),
                 );
               },
-              child: const Text('Metas diárias'),
+              child: Image.asset(
+                'assets/sprites_sistema/friend.png',
+                width: 60,
+                height: 60,
+              ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => InventoryPage(),
-                    fullscreenDialog: true,
-                  ),
-                );
-              },
-              child: const Text('Inventário'),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

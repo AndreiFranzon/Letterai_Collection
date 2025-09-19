@@ -4,6 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 //import 'package:firebase_core/firebase_core.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 //import 'package:letterai_colletion/Login/login_page.dart';
+import 'package:letterai_colletion/Login/login_support.dart';
 
 class AuthService {
 
@@ -29,7 +30,8 @@ class AuthService {
 
     // 🔹 Inicializa estatísticas após login
     if (userCredential.user != null) {
-      await _inicializarEstatisticas(userCredential.user!);
+      await inicializarEstatisticas(userCredential.user!);
+      await FriendCode.friendCode(userCredential.user!);
     }
 
     return userCredential;
@@ -56,33 +58,3 @@ Future<void> logout(BuildContext context) async {
 
 }
 
-Future<void> _inicializarEstatisticas(User user) async {
-  final estatisticasRef = FirebaseFirestore.instance
-      .collection('usuarios')
-      .doc(user.uid)
-      .collection('estatisticas');
-
-  final snapshot = await estatisticasRef.limit(1).get();
-
-  // 🔹 Se a coleção não tem nenhum documento, inicializa do zero
-  if (snapshot.docs.isEmpty) {
-    print("Coleção estatisticas não encontrada, criando...");
-
-    await estatisticasRef.doc('nivel').set({
-      'nivel': 1,
-      'xp': 0,
-    });
-
-    await estatisticasRef.doc('pontos_amarelos').set({
-      'pontos': 0,
-    });
-
-    await estatisticasRef.doc('pontos_roxos').set({
-      'pontos': 0,
-    });
-
-    print("Estatísticas criadas com sucesso!");
-  } else {
-    print("Coleção estatisticas já existe, não foi necessário recriar.");
-  }
-}
