@@ -143,7 +143,13 @@ Future<void> sincronizarTudoPerm({required Function(bool) sync}) async {
       final pontosAmarelos = await calcularPontosAmarelos(diaAlvo);
       final pontosRoxos = await calcularPontosRoxos(diaAlvo);
 
-      debugPrint("Pontuação final do dia: ${pontosAmarelos + pontosRoxos}");
+      final xp = pontosAmarelos + pontosRoxos;
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await salvarXpPlayer(user.uid, xp);
+        await salvarXpCard(userId, xp);
+      }
     } catch (e) {
       debugPrint("Erro ao calcular pontos: $e");
     }
@@ -152,4 +158,76 @@ Future<void> sincronizarTudoPerm({required Function(bool) sync}) async {
   }
 
   sync(false);
+}
+
+Future<void> salvarXpPlayer(String userId, int xpGanho) async {
+  final nivelDoc = FirebaseFirestore.instance
+      .collection('usuarios')
+      .doc(userId)
+      .collection('estatisticas')
+      .doc('nivel');
+
+  final nivelSnap = await nivelDoc.get();
+  int nivel = nivelSnap.data()?['nivel'] ?? 1;
+  int xpAtual = nivelSnap.data()?['xp'] ?? 0;
+
+  int xpTotal = xpAtual + xpGanho;
+  int xpNecessario = 50 + (50 * nivel);
+
+  while (xpTotal >= xpNecessario) {
+    xpTotal -= xpNecessario;
+    nivel += 1;
+    xpNecessario = 50 + (50 * nivel);
+  }
+
+  await nivelDoc.update({
+    'nivel': nivel,
+    'xp': xpTotal,
+  });
+}
+
+Future<void> salvarXpCard(String userId, int xpGanho) async {
+  final firestore = FirebaseFirestore.instance;
+
+  final cartaAtivaDoc = await firestore
+      .collection('usuarios')
+      .doc(userId)
+      .collection('inventario')
+      .doc('itens')
+      .collection('carta_ativa')
+      .doc('selecionada')
+      .get();
+
+  if (!cartaAtivaDoc.exists) return;
+
+  final cartaId = cartaAtivaDoc.data()?['id'];
+  if (cartaId == null) return;
+
+  final cartaDoc = firestore
+      .collection('usuarios')
+      .doc(userId)
+      .collection('inventario')
+      .doc('itens')
+      .collection('colecao')
+      .doc(cartaId);
+
+  final cartaSnap = await cartaDoc.get();
+  int nivelCarta = cartaSnap.data()?['nivel'] ?? 1;
+  int xpCarta = cartaSnap.data()?['xp'] ?? 0;
+  int pontosAtuais = cartaSnap.data()?['pontos_ganhos'] ?? 0;
+
+  int xpTotalCarta = xpCarta + xpGanho;
+  int xpNecessarioCarta = 50 + (50 * nivelCarta); // XP necessário da carta
+
+  while (xpTotalCarta >= xpNecessarioCarta) {
+    xpTotalCarta -= xpNecessarioCarta;
+    nivelCarta += 1;
+    xpNecessarioCarta = 50 + (50 * nivelCarta);
+  }
+
+  await cartaDoc.update({
+    'nivel': nivelCarta,
+    'xp': xpTotalCarta,
+    'pontos_ganhos': pontosAtuais + 6,
+  });
 }

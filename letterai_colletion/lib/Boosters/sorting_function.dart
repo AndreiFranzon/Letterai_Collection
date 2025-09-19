@@ -165,7 +165,11 @@ Future<Map<String, dynamic>> sortearEnergias() async {
   };
 }
 
-Future<Map<String, dynamic>> abrirPacote(Pacote pacote) async {
+//Abrir pacote genérico
+Future<Map<String, dynamic>> abrirPacote({
+  required Pacote pacote,
+  bool decrementarInventario = false, // false = não decrementa, true = decrementa
+}) async {
   final user = FirebaseAuth.instance.currentUser;
   if (user == null) {
     debugPrint('O usuário não está logado');
@@ -178,11 +182,35 @@ Future<Map<String, dynamic>> abrirPacote(Pacote pacote) async {
   final userId = user.uid;
   final firestore = FirebaseFirestore.instance;
 
+  // Decrementa a quantidade do pacote se vier do inventário
+  if (decrementarInventario) {
+    final pacoteRef = firestore
+        .collection('usuarios')
+        .doc(userId)
+        .collection('inventario')
+        .doc('itens')
+        .collection('pacotes')
+        .doc(pacote.id.toString());
+
+    final docAtual = await pacoteRef.get();
+    if (docAtual.exists && (docAtual.data()?['quantidade'] ?? 0) > 0) {
+      await pacoteRef.update({'quantidade': FieldValue.increment(-1)});
+      debugPrint('Pacote ${pacote.id} decrementado no inventário');
+    } else {
+      debugPrint('Pacote ${pacote.id} não encontrado ou quantidade insuficiente');
+      return {
+        'cartas': [],
+        'energia': {'energiaId': null, 'quantidade': 0},
+      };
+    }
+  }
+
   List<Map<String, dynamic>> cartasSorteadas = [];
   List<Map<String, dynamic>> cartasParaBatch = [];
 
   for (int i = 0; i < 3; i++) {
     final cartaSorteada = sortearCarta(pacote.id.toString());
+    debugPrint('Carta sorteada: $cartaSorteada');
     final cartaId = cartaSorteada['id'] as int;
 
     // Busca dados completos da carta
@@ -194,12 +222,14 @@ Future<Map<String, dynamic>> abrirPacote(Pacote pacote) async {
 
     final dadosCarta = cartaDoc.data()!;
     cartasSorteadas.add(dadosCarta); // Sempre adiciona para feedback visual
+    debugPrint('Dados da carta adicionada: $dadosCarta');
 
     // Adiciona campos extras para o inventário principal
     cartasParaBatch.add({
       ...dadosCarta,
       'xp': 0,
       'nivel': 1,
+      'pontos_ganhos': 0,
       'obtidaEm': FieldValue.serverTimestamp(),
     });
 
@@ -235,108 +265,11 @@ Future<Map<String, dynamic>> abrirPacote(Pacote pacote) async {
 
   // Sorteia e salva energia
   final energiaSorteada = await sortearEnergias();
+  debugPrint('Energia sorteada: $energiaSorteada');
+  debugPrint('Cartas sorteadas: $cartasSorteadas');
 
   return {
     'cartas': cartasSorteadas, // Sempre as 3 cartas sorteadas
-    'energia': energiaSorteada,
-  };
-}
-
-//Abrir pacotes do inventário
-Future<Map<String, dynamic>> abrirPacoteInventario(UsuarioItem pacoteItem) async {
-  final user = FirebaseAuth.instance.currentUser;
-  if (user == null) {
-    debugPrint('Usuário não logado');
-    return {
-      'cartas': [],
-      'energia': {'energiaId': null, 'quantidade': 0},
-    };
-  }
-
-  final userId = user.uid;
-  final firestore = FirebaseFirestore.instance;
-
-  if (pacoteItem.quantidade <= 0) {
-    debugPrint('O usuário não possui pacotes desse tipo');
-    return {
-      'cartas': [],
-      'energia': {'energiaId': null, 'quantidade': 0},
-    };
-  }
-
-  // Decrementa a quantidade do pacote no inventário
-  final pacoteRef = firestore
-      .collection('usuarios')
-      .doc(userId)
-      .collection('inventario')
-      .doc('itens')
-      .collection('pacotes')
-      .doc(pacoteItem.id.toString());
-      debugPrint('Antes: ${pacoteItem.quantidade}');
-
-  await pacoteRef.update({
-    'quantidade': FieldValue.increment(-1),
-  });
-  final docAtual = await pacoteRef.get();
-  debugPrint('Depois: ${docAtual.data()?['quantidade']}');
-
-  // Sorteia cartas
-  List<Map<String, dynamic>> cartasSorteadas = [];
-  List<Map<String, dynamic>> cartasParaBatch = [];
-
-  for (int i = 0; i < 3; i++) {
-    final cartaSorteada = sortearCarta(pacoteItem.id.toString());
-    final cartaId = cartaSorteada['id'] as int;
-
-    final cartaDoc = await firestore.collection('cartas').doc(cartaId.toString()).get();
-    if (!cartaDoc.exists) continue;
-
-    final dadosCarta = cartaDoc.data()!;
-    cartasSorteadas.add(dadosCarta);
-
-    // Prepara dados para inventário principal
-    cartasParaBatch.add({
-      ...dadosCarta,
-      'xp': 0,
-      'nivel': 1,
-      'obtidaEm': FieldValue.serverTimestamp(),
-    });
-
-    // Atualiza coleção auxiliar apenas se ainda não tiver
-    final cartaObtidaRef = firestore
-        .collection('usuarios')
-        .doc(userId)
-        .collection('inventario')
-        .doc('itens')
-        .collection('cartas_obtidas')
-        .doc('lista');
-
-    await cartaObtidaRef.set({
-      'cartas_obtidas': FieldValue.arrayUnion([cartaId.toString()])
-    }, SetOptions(merge: true));
-  }
-
-  // Salva cartas em batch no inventário principal
-  if (cartasParaBatch.isNotEmpty) {
-    final batch = firestore.batch();
-    for (final carta in cartasParaBatch) {
-      final cartaRef = firestore
-          .collection('usuarios')
-          .doc(userId)
-          .collection('inventario')
-          .doc('itens')
-          .collection('colecao')
-          .doc(); // autoId gerado
-      batch.set(cartaRef, carta);
-    }
-    await batch.commit();
-  }
-
-  // Sorteia e salva energia
-  final energiaSorteada = await sortearEnergias();
-
-  return {
-    'cartas': cartasSorteadas,
     'energia': energiaSorteada,
   };
 }

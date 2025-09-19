@@ -121,4 +121,16 @@ Future<void> evolveCard(
           .update({'imagem': cardData['imagem']});
     }
   }
+
+  final cartaObtidaRef = FirebaseFirestore.instance
+    .collection('usuarios')
+    .doc(user.uid)
+    .collection('inventario')
+    .doc('itens')
+    .collection('cartas_obtidas')
+    .doc('lista');
+
+  await cartaObtidaRef.set({
+    'cartas_obtidas': FieldValue.arrayUnion([nextCardId])
+  }, SetOptions(merge: true));
 }

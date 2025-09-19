@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:letterai_colletion/Boosters/booster_page.dart';
 import 'package:letterai_colletion/Boosters/sorting_function.dart';
 import 'package:letterai_colletion/Models/pacote.dart';
 
@@ -119,7 +120,7 @@ class _InventoryPageState extends State<InventoryPage> {
 
     return snapshot.docs
         .map((doc) => UsuarioItem.fromMap(doc.data(), "id"))
-        .where((item) => item.quantidade >0)
+        .where((item) => item.quantidade > 0)
         .toList();
   }
 
@@ -135,7 +136,7 @@ class _InventoryPageState extends State<InventoryPage> {
 
     return snapshot.docs
         .map((doc) => UsuarioItem.fromMap(doc.data(), "energiaId"))
-        .where((item) => item.quantidade >0)
+        .where((item) => item.quantidade > 0)
         .toList();
   }
 
@@ -296,8 +297,21 @@ class _InventoryPageState extends State<InventoryPage> {
                           if (_pacoteSelecionado == null) return;
 
                           // Abre o pacote no inventário
-                          await abrirPacoteInventario(_pacoteSelecionado!);
-
+                          final pacote = _pacotesMaster[_pacoteSelecionado!.id];
+                          if (pacote != null) {
+                            Navigator.of(context).pop(); // fecha overlay
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder:
+                                    (_) => BoosterPage(
+                                      pacote: pacote,
+                                      decrementarInventario:
+                                          true, // aqui decrementa
+                                    ),
+                              ),
+                            );
+                          }
                           // Atualiza o inventário para refletir a nova quantidade
                           final pacotesAtualizados =
                               await buscarPacotesInventario();

@@ -4,6 +4,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:letterai_colletion/Boosters/buy_function.dart';
 import 'package:letterai_colletion/Boosters/sorting_function.dart';
 import 'package:letterai_colletion/Models/pacote.dart';
+import 'package:provider/provider.dart';
+import 'package:letterai_colletion/Database_Support/pontos_provider.dart';
+
+import 'package:letterai_colletion/Boosters/booster_page.dart';
 
 /*class Pacote {
   final int id;
@@ -92,7 +96,12 @@ class StorePage extends StatelessWidget {
                             ElevatedButton(
                               onPressed: () {
                                 Navigator.of(context).pop();
-                                abrirPacote(pacote);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => BoosterPage(pacote: pacote, decrementarInventario: false),
+                                  ),
+                                );
                               },
                               style: ElevatedButton.styleFrom(
                                 minimumSize: const Size(120, 50),
@@ -181,12 +190,89 @@ class StorePage extends StatelessWidget {
   );
 }
 
-
-
   @override
   Widget build(BuildContext context) {
+    final pontosProvider = Provider.of<PontosProvider>(context);
+
     return Scaffold(
-      appBar: AppBar(title: const Text("Loja")),
+      appBar: AppBar(
+    actions: [
+      pontosProvider.carregando
+          ? const Padding(
+              padding: EdgeInsets.only(right: 16),
+              child: SizedBox(
+                height: 24,
+                width: 24,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white, // muda a cor se precisar
+                ),
+              ),
+            )
+          : Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        'assets/sprites_sistema/yellow_coin.png',
+                        height: 24,
+                        width: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${pontosProvider.pontosAmarelos}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.black, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        'assets/sprites_sistema/purple_coin.png',
+                        height: 24,
+                        width: 24,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${pontosProvider.pontosRoxos}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16), // espaço da borda do appbar
+              ],
+            ),
+    ],
+  ),
+
+      
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: FutureBuilder<List<Pacote>>(
