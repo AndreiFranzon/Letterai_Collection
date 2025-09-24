@@ -8,7 +8,7 @@ class FriendsSupport {
         .collection("usuarios")
         .doc(uid)
         .collection("estatisticas")
-        .doc("friend_code");
+        .doc("codigo_amigo");
 
     final snapshot = await docRef.get();
 
@@ -22,17 +22,65 @@ class FriendsSupport {
     }
   }
 
-  static Future<String?> buscarFriendCode(String code) async {
-    final doc =
-        await FirebaseFirestore.instance
-            .collection("codigo_amigo")
-            .doc(code)
-            .get();
+static Future<Map<String, dynamic>?> buscarFriendCode(String code) async {
+  try {
+    final doc = await FirebaseFirestore.instance
+        .collection("codigo_amigo")
+        .doc(code)
+        .get();
 
-    if (doc.exists) {
-      return doc.data()?['uid']; // Retorna o UID do usuário dono do código
-    } else {
-      return null; // Código não encontrado
+    if (!doc.exists) return null;
+
+    final uid = doc.data()?['uid'];
+    if (uid == null) return null;
+
+    // Busca os dados do usuário pelo UID
+    final dados = await FriendsSupport.dadosAmigo(uid);
+    if (dados == null) return null;
+
+    print("$dados");
+    // Retorna os dados + UID
+    return {
+      "uid": uid,
+      ...dados,
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+
+  static Future<Map<String, dynamic>?> dadosAmigo(String uid) async {
+    try {
+      final dadosPessoaisDoc = await FirebaseFirestore.instance
+          .collection("usuarios")
+          .doc(uid)
+          .collection("estatisticas")
+          .doc("dados_pessoais")
+          .get();
+
+      final nivelDoc = await FirebaseFirestore.instance
+          .collection("usuarios")
+          .doc(uid)
+          .collection("estatisticas")
+          .doc("nivel")
+          .get();
+
+      if (!dadosPessoaisDoc.exists) return null;
+
+      final dados = dadosPessoaisDoc.data();
+      final nivelData = nivelDoc.data();
+
+      
+
+      return {
+        "apelido": dados?["apelido"] ?? "Desconhecido",
+        "avatar": dados?["avatar"] ?? "assets/avatar/default.png",
+        "nivel": nivelData?["nivel"] ?? 0,
+      };
+      
+    } catch (e) {
+      return null;
     }
   }
 

@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:letterai_colletion/Menu/welcome_page.dart';
 //import 'packa4ge:flutter/services.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
@@ -48,7 +49,7 @@ class MyApp extends StatelessWidget {
                   );
                   await dadosProvider.carregarDados();
                 });
-                return const HomePage();
+                return const WelcomePage();
               }
             }
             return const Scaffold(

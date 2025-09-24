@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:letterai_colletion/Menu/welcome_page.dart';
 // 'package:firebase_auth/firebase_auth.dart';
 import 'auth_service.dart';
 //import 'package:letterai_colletion/Menu/home_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
-
   @override
   State<LoginPage> createState() => _LoginPageState();
 }
 
 class _LoginPageState extends State<LoginPage> {
   final AuthService _authService = AuthService();
-
   void _login() async {
     await _authService.signInWithGoogle();
   }
@@ -24,7 +23,7 @@ class _LoginPageState extends State<LoginPage> {
         child: ElevatedButton.icon(
           onPressed: _login,
           icon: const Icon(Icons.login),
-          label: const Text("Fazer login com Google")
+          label: const Text("Fazer login com Google"),
         ),
       ),
     );

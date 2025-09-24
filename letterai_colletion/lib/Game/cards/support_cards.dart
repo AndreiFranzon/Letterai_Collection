@@ -134,3 +134,50 @@ Future<void> evolveCard(
     'cartas_obtidas': FieldValue.arrayUnion([nextCardId])
   }, SetOptions(merge: true));
 }
+
+Future<void> aplicarPontos(Map<String, int> pontosDistribuidos, String cartaId) async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  final Map<String, dynamic> updates = {};
+
+  // Percorre cada estatística e adiciona o FieldValue.increment se houver pontos
+  pontosDistribuidos.forEach((stat, pontos) {
+    if (pontos > 0) {
+      updates[stat.toLowerCase()] = FieldValue.increment(pontos);
+    }
+  });
+
+  if (updates.isEmpty) return; // Não há pontos para aplicar
+
+  try {
+    await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(user.uid)
+        .collection('inventario')
+        .doc('itens')
+        .collection('colecao')
+        .doc(cartaId)
+        .update(updates);
+
+    // Atualiza o campo de pontos_ganhos, subtraindo o total usado
+    int totalDistribuido =
+        pontosDistribuidos.values.fold(0, (prev, element) => prev + element);
+
+    if (totalDistribuido > 0) {
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(user.uid)
+          .collection('inventario')
+          .doc('itens')
+          .collection('colecao')
+          .doc(cartaId)
+          .update({
+        'pontos_ganhos': FieldValue.increment(-totalDistribuido),
+      });
+    }
+  } catch (e) {
+    print('Erro ao aplicar pontos: $e');
+  }
+}
+

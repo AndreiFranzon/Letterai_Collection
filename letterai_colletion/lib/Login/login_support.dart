@@ -32,6 +32,25 @@ Future<void> inicializarEstatisticas(User user) async {
   }
 }
 
+Future<bool> verificarApelido(User user) async {
+  final docRef = FirebaseFirestore.instance
+      .collection("usuarios")
+      .doc(user.uid)
+      .collection("estatisticas")
+      .doc("dados_pessoais");
+
+  final docSnap = await docRef.get();
+
+  if (!docSnap.exists) return false;
+
+  final dados = docSnap.data();
+  if (dados == null || dados["apelido"] == null) {
+    return false;
+  }
+
+  return true;
+}
+
 class FriendCode {
   static String gerarFriendCode(String uid) {
     final posicoes = [4, 13, 1, 16, 9, 8, 12, 0];
@@ -74,5 +93,6 @@ class FriendCode {
       'code': code,
     });
   }
+
 }
 

@@ -48,7 +48,7 @@ class _FriendsPageState extends State<FriendsPage> {
     final pedidos = await FriendsSupport.buscarPedidosRecebidos(meuUid);
 
     showDialog(
-      context: parentContext, // usa o mesmo context do Scaffold
+      context: parentContext,
       builder: (dialogContext) {
         return AlertDialog(
           title: const Text("Pedidos de amizade"),
@@ -64,67 +64,78 @@ class _FriendsPageState extends State<FriendsPage> {
                         final pedido = pedidos[index];
                         final uuid = pedido['uuid'] as String;
 
-                        return ListTile(
-                          title: Text(uuid),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.check,
-                                  color: Colors.green,
+                        // FutureBuilder para carregar os dados do remetente
+                        return FutureBuilder<Map<String, dynamic>?>(
+                          future: FriendsSupport.dadosAmigo(uuid),
+                          builder: (context, snapshotAmigo) {
+                            if (!snapshotAmigo.hasData) {
+                              return const ListTile(
+                                title: Text("Carregando..."),
+                              );
+                            }
+
+                            final dadosAmigo = snapshotAmigo.data!;
+                            return ListTile(
+                              leading: CircleAvatar(
+                                backgroundImage: AssetImage(
+                                  dadosAmigo['avatar'],
                                 ),
-                                onPressed: () async {
-                                  final meuUid =
-                                      FirebaseAuth.instance.currentUser?.uid;
-                                  if (meuUid != null) {
-                                    await FriendsSupport.aceitarPedido(
-                                      meuUid,
-                                      uuid,
-                                    );
-
-                                    // Fecha o dialog primeiro usando dialogContext
-                                    Navigator.of(dialogContext).pop();
-
-                                    // Depois mostra o SnackBar usando o parentContext
-                                    ScaffoldMessenger.of(
-                                      parentContext,
-                                    ).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          "Amizade aceita com $uuid",
-                                        ),
-                                      ),
-                                    );
-                                  }
-                                },
                               ),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.close,
-                                  color: Colors.red,
-                                ),
-                                onPressed: () async {
-                                  await FriendsSupport.recusarPedido(
-                                    meuUid,
-                                    uuid,
-                                  );
-
-                                  ScaffoldMessenger.of(
-                                    parentContext,
-                                  ).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        "Amizade recusada com $uuid",
-                                      ),
+                              title: Text(dadosAmigo['apelido']),
+                              subtitle: Text("Nível: ${dadosAmigo['nivel']}"),
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.check,
+                                      color: Colors.green,
                                     ),
-                                  );
-
-                                  Navigator.of(dialogContext).pop();
-                                },
+                                    onPressed: () async {
+                                      if (meuUid != null) {
+                                        await FriendsSupport.aceitarPedido(
+                                          meuUid,
+                                          uuid,
+                                        );
+                                        Navigator.of(dialogContext).pop();
+                                        ScaffoldMessenger.of(
+                                          parentContext,
+                                        ).showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              "Amizade aceita com ${dadosAmigo['apelido']}",
+                                            ),
+                                          ),
+                                        );
+                                      }
+                                    },
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.close,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () async {
+                                      await FriendsSupport.recusarPedido(
+                                        meuUid,
+                                        uuid,
+                                      );
+                                      Navigator.of(dialogContext).pop();
+                                      ScaffoldMessenger.of(
+                                        parentContext,
+                                      ).showSnackBar(
+                                        SnackBar(
+                                          content: Text(
+                                            "Amizade recusada com ${dadosAmigo['apelido']}",
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            );
+                          },
                         );
                       },
                     ),
@@ -205,9 +216,13 @@ class _FriendsPageState extends State<FriendsPage> {
                     final code = _buscarController.text.trim();
                     if (code.isEmpty) return;
 
-                    final uuid = await FriendsSupport.buscarFriendCode(code);
-                    if (uuid != null) {
-                      setState(() => resultadoBusca = {'uuid': uuid});
+                    final resultado = await FriendsSupport.buscarFriendCode(
+                      code,
+                    );
+                    if (resultado != null) {
+                      setState(
+                        () => resultadoBusca = resultado,
+                      ); // <-- aqui você armazena o Map completo
                     } else {
                       setState(() => resultadoBusca = null);
                       ScaffoldMessenger.of(context).showSnackBar(
@@ -223,6 +238,7 @@ class _FriendsPageState extends State<FriendsPage> {
             const SizedBox(height: 24),
 
             // Resultado da pesquisa
+            // Resultado da pesquisa
             if (resultadoBusca != null)
               Container(
                 padding: const EdgeInsets.all(12),
@@ -232,19 +248,42 @@ class _FriendsPageState extends State<FriendsPage> {
                   border: Border.all(color: Colors.black, width: 2),
                 ),
                 child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      "UUID: ${resultadoBusca!['uuid']}",
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                    // Avatar à esquerda
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundImage: AssetImage(resultadoBusca!['avatar']),
+                    ),
+                    const SizedBox(width: 12),
+
+                    // Apelido e nível em coluna
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            resultadoBusca!['apelido'],
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            "Nível: ${resultadoBusca!['nivel']}",
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
+
+                    // Botão "Adicionar" à direita
                     ElevatedButton(
                       onPressed: () async {
                         final meuUid = FirebaseAuth.instance.currentUser?.uid;
-                        final friendUid = resultadoBusca!['uuid'];
+                        final friendUid = resultadoBusca!['uid'];
 
                         if (meuUid != null && friendUid != null) {
                           await FriendsSupport.enviarPedidoAmizade(
@@ -308,15 +347,23 @@ class _FriendsPageState extends State<FriendsPage> {
                   return ListView.builder(
                     itemCount: amigosDocs.length,
                     itemBuilder: (context, index) {
-                      final amigoUid =
-                          amigosDocs[index].id; // ID do doc é o UUID do amigo
-                      return ListTile(
-                        leading: const Icon(Icons.person),
-                        title: Text("$amigoUid"), // podemos buscar nome depois
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
+                      final amigoUid = amigosDocs[index].id; // UUID do amigo
+
+                      return FutureBuilder<Map<String, dynamic>?>(
+                        future: FriendsSupport.dadosAmigo(amigoUid),
+                        builder: (context, snapshotAmigo) {
+                          if (!snapshotAmigo.hasData) {
+                            return const ListTile(title: Text("Carregando..."));
+                          }
+
+                          final dadosAmigo = snapshotAmigo.data!;
+                          return ListTile(
+                            leading: CircleAvatar(
+                              backgroundImage: AssetImage(dadosAmigo['avatar']),
+                            ),
+                            title: Text(dadosAmigo['apelido']),
+                            subtitle: Text("Nível: ${dadosAmigo['nivel']}"),
+                            trailing: IconButton(
                               icon: const Icon(Icons.delete, color: Colors.red),
                               onPressed: () {
                                 showDialog(
@@ -325,7 +372,7 @@ class _FriendsPageState extends State<FriendsPage> {
                                     return AlertDialog(
                                       title: const Text("Confirmar remoção"),
                                       content: Text(
-                                        "Você realmente quer remover $amigoUid da sua lista de amigos?",
+                                        "Você realmente quer remover ${dadosAmigo['apelido']} da sua lista de amigos?",
                                       ),
                                       actions: [
                                         TextButton(
@@ -351,7 +398,7 @@ class _FriendsPageState extends State<FriendsPage> {
                                               ).showSnackBar(
                                                 SnackBar(
                                                   content: Text(
-                                                    "$amigoUid removido da sua lista",
+                                                    "${dadosAmigo['apelido']} removido da sua lista",
                                                   ),
                                                 ),
                                               );
@@ -368,8 +415,8 @@ class _FriendsPageState extends State<FriendsPage> {
                                 );
                               },
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       );
                     },
                   );

@@ -2,7 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'package:letterai_colletion/Game/cards/support.dart';
+import 'package:letterai_colletion/Game/cards/support_cards.dart';
 
 class CardPage extends StatefulWidget {
   final Map<String, dynamic> cardData;
@@ -68,7 +68,277 @@ class _CardPageState extends State<CardPage> {
                     ),
                   ),
 
+                  const SizedBox(height: 16),
+
+                  // Barra de XP com texto sobre ela
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                    child: Row(
+                      children: [
+                        // Círculo do nível
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.black, width: 2),
+                          ),
+                          alignment: Alignment.center,
+                          child: Text(
+                            '${cardData['nivel'] ?? 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 20,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+
+                        // Barra de XP com texto sobre ela
+                        Expanded(
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              // Barra de progresso
+                              Container(
+                                height: 30,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey.shade300,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: Colors.black,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(8),
+                                  child: LinearProgressIndicator(
+                                    value:
+                                        (cardData['xp'] ?? 0) /
+                                        (50 + (50 * (cardData['nivel'] ?? 1))),
+                                    backgroundColor: Colors.transparent,
+                                    valueColor:
+                                        const AlwaysStoppedAnimation<Color>(
+                                          Colors.redAccent,
+                                        ),
+                                  ),
+                                ),
+                              ),
+                              // Texto do XP
+                              Text(
+                                '${cardData['xp'] ?? 0} / ${50 + (50 * (cardData['nivel'] ?? 1))} XP',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 24),
+
+                  // Depois da barra de XP
+                  if ((cardData['pontos_ganhos'] ?? 0) > 0) ...[
+                    const SizedBox(height: 12),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) {
+                              // Map para controlar os pontos atribuídos
+                              Map<String, int> pontosDistribuidos = {
+                                'Vida': 0,
+                                'Ataque': 0,
+                                'Defesa': 0,
+                                'Velocidade': 0,
+                                'Magia': 0,
+                                'Sorte': 0,
+                              };
+
+                              int pontosDisponiveis =
+                                  cardData['pontos_ganhos'] ?? 0;
+
+                              return StatefulBuilder(
+                                builder: (context, setState) {
+                                  return AlertDialog(
+                                    title: Text(
+                                      'Pontos disponíveis: $pontosDisponiveis',
+                                    ),
+                                    content: SizedBox(
+                                      width: double.maxFinite,
+                                      child: SingleChildScrollView(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            // Gerando os campos de estatísticas
+                                            ...pontosDistribuidos.keys.map((
+                                              stat,
+                                            ) {
+                                              // Valor atual da estatística
+                                              final valorAtual =
+                                                  cardData[stat
+                                                      .toLowerCase()] ??
+                                                  0;
+
+                                              return Padding(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      vertical: 4.0,
+                                                    ),
+                                                child: Row(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .spaceBetween,
+                                                  children: [
+                                                    // Nome + valor atual
+                                                    Text(
+                                                      '$stat: $valorAtual',
+                                                      style: const TextStyle(
+                                                        fontSize: 16,
+                                                      ),
+                                                    ),
+                                                    Row(
+                                                      children: [
+                                                        // Botão de remover ponto
+                                                        ElevatedButton(
+                                                          onPressed:
+                                                              pontosDistribuidos[stat]! >
+                                                                      0
+                                                                  ? () {
+                                                                    setState(() {
+                                                                      pontosDistribuidos[stat] =
+                                                                          pontosDistribuidos[stat]! -
+                                                                          1;
+                                                                      pontosDisponiveis++;
+                                                                    });
+                                                                  }
+                                                                  : null,
+                                                          child: const Text(
+                                                            '-',
+                                                          ),
+                                                          style:
+                                                              ElevatedButton.styleFrom(
+                                                                minimumSize:
+                                                                    const Size(
+                                                                      32,
+                                                                      32,
+                                                                    ),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                              ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 4,
+                                                        ),
+                                                        // Botão de adicionar ponto
+                                                        ElevatedButton(
+                                                          onPressed:
+                                                              pontosDisponiveis >
+                                                                      0
+                                                                  ? () {
+                                                                    setState(() {
+                                                                      pontosDistribuidos[stat] =
+                                                                          pontosDistribuidos[stat]! +
+                                                                          1;
+                                                                      pontosDisponiveis--;
+                                                                    });
+                                                                  }
+                                                                  : null,
+                                                          child: const Text(
+                                                            '+',
+                                                          ),
+                                                          style:
+                                                              ElevatedButton.styleFrom(
+                                                                minimumSize:
+                                                                    const Size(
+                                                                      32,
+                                                                      32,
+                                                                    ),
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                              ),
+                                                        ),
+                                                        const SizedBox(
+                                                          width: 8,
+                                                        ),
+                                                        // Número de pontos atribuídos
+                                                        Text(
+                                                          '${pontosDistribuidos[stat]}',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 16,
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+
+                                            const SizedBox(height: 16),
+                                            const Text(
+                                              'Volte para a coleção e entre novamente para atualizar a carta',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () async {
+                                          await aplicarPontos(
+                                            pontosDistribuidos,
+                                            cardData['id'],
+                                          );
+                                          Navigator.of(context).pop();
+                                          setState(
+                                            () {},
+                                          ); // Atualiza a tela da carta
+                                        },
+                                        child: const Text('Salvar'),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              );
+                            },
+                          );
+                        },
+
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orangeAccent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Text(
+                          'Você tem pontos não usados!',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
 
                   // Estatísticas em card
                   Padding(

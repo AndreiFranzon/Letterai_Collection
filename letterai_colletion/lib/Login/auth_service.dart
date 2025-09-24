@@ -13,20 +13,21 @@ class AuthService {
   );
 
   Future<UserCredential?> signInWithGoogle() async {
-    try {
-      
-      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+  try {
+    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
 
-      if (googleUser == null) return null;
+    if (googleUser == null) return null;
 
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+    final GoogleSignInAuthentication googleAuth =
+        await googleUser.authentication;
 
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
+    final AuthCredential credential = GoogleAuthProvider.credential(
+      accessToken: googleAuth.accessToken,
+      idToken: googleAuth.idToken,
+    );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+    final userCredential =
+        await FirebaseAuth.instance.signInWithCredential(credential);
 
     // 🔹 Inicializa estatísticas após login
     if (userCredential.user != null) {
@@ -35,11 +36,12 @@ class AuthService {
     }
 
     return userCredential;
-    } catch (e) {
-      print ('Erro ao fazer login com Google: $e');
-      return null;
-    }
+  } catch (e) {
+    print('Erro ao fazer login com Google: $e');
+    return null;
   }
+}
+
 
 Future<void> signOut() async {
   try {
