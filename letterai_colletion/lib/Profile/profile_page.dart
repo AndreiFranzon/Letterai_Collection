@@ -374,7 +374,7 @@ Widget build(BuildContext context) {
                                   const SizedBox(height: 12),
                                   Image.asset(
                                     user.dadosPessoais["personagem"],
-                                    height: 300,
+                                    height: 200,
                                     fit: BoxFit.contain,
                                   ),
                                 ],
